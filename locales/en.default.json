@@ -31,6 +31,7 @@
       "country_label": "Country/region"
     },
     "pagination": {
+      "label": "Pagination",
       "previous": "Previous",
       "next": "Next",
       "page": "Page {{ page }}"
@@ -475,6 +476,7 @@
         "one": "{{ count }} product",
         "other": "{{ count }} products"
       },
+      "showing_count": "Showing {{ shown }} of {{ total }} products",
       "sort_by": "Sort by",
       "sort_options": {
         "manual": "Featured",
@@ -487,8 +489,23 @@
         "created_descending": "Date, new to old"
       },
       "filter": "Filter",
+      "filter_label": "Filter products",
       "clear_filters": "Clear all",
-      "no_results": "No products match your filters."
+      "clear_all_filters": "Clear all filters",
+      "no_results": "No products match your filters.",
+      "no_results_title": "No products found",
+      "no_results_text": "Try adjusting your filters or clearing them to see all products.",
+      "grid_view": "Grid view",
+      "list_view": "List view",
+      "view_label": "View mode",
+      "secondary_image": "Secondary image",
+      "load_more": "Load more",
+      "price_min": "Minimum price",
+      "price_max": "Maximum price"
+    },
+    "banner": {
+      "breadcrumbs_label": "Collection breadcrumbs",
+      "collections": "Collections"
     }
   },
   "settings_schema": {

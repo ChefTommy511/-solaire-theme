@@ -1,7 +1,7 @@
 {%- comment -%}
   Solaire Theme — Product Card Snippet
-  Displays a product thumbnail with hover state for the second image.
-  Enhanced with quick-add overlay and variant swatches.
+  Premium product card for collection grids.
+  Supports grid and list view modes, hover secondary image, color swatches, quick add.
 {%- endcomment -%}
 
 {%- liquid
@@ -9,64 +9,151 @@
   if product == nil
     return
   endif
-  assign first_image = product.featured_media.preview_image
-  assign second_image = product.media[1].preview_image | default: first_image
-  assign show_second_on_hover = show_secondary_image | default: true
+
+  assign context = context | default: 'collection'
+  assign image_ratio = image_ratio | default: '4-5'
+  assign show_secondary_image = show_secondary_image | default: false
+  assign show_vendor = show_vendor | default: true
+  assign show_color_swatches = show_color_swatches | default: true
+  assign show_quick_add = show_quick_add | default: false
+
+  assign featured_image = product.featured_image
+  assign secondary_image = product.images[1]
+  assign has_secondary = false
+  if show_secondary_image and secondary_image != blank
+    assign has_secondary = true
+  endif
+
+  assign variant = product.selected_or_first_available_variant
+  assign on_sale = false
+  if variant.compare_at_price > variant.price
+    assign on_sale = true
+  endif
+
+  assign ratio_class = 'product-card__image--' | append: image_ratio
 -%}
 
-<div class="product-card" data-product-handle="{{ product.handle }}">
-  <a href="{{ product.url }}" class="product-card__link" aria-label="{{ product.title | escape }}">
-    <div class="product-card__media">
-      {%- if first_image != blank -%}
+<article
+  class="product-card product-card--{{ context }}"
+  data-product-card
+  data-product-id="{{ product.id }}"
+  data-product-handle="{{ product.handle }}"
+>
+  <!-- Image -->
+  <div class="product-card__image-wrapper">
+    <a
+      href="{{ product.url }}"
+      class="product-card__image-link {{ ratio_class }}"
+      aria-label="{{ product.title | escape }}"
+    >
+      {%- if featured_image != blank -%}
         {%- render 'lazy-image',
-          image: first_image,
-          sizes: '(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
+          image: featured_image,
+          alt: product.title | escape,
           class: 'product-card__image product-card__image--primary',
-          alt: product.title | escape
+          sizes: '(min-width: 1440px) 360px, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
+          widths: '180, 360, 540, 720, 900, 1080'
         -%}
-        {%- if show_second_on_hover and second_image != blank and second_image != first_image -%}
-          {%- render 'lazy-image',
-            image: second_image,
-            sizes: '(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
-            class: 'product-card__image product-card__image--secondary',
-            alt: product.title | append: ' - alternate view' | escape
-          -%}
-        {%- endif -%}
       {%- else -%}
-        <div class="product-card__placeholder">
-          {{ 'product-1' | placeholder_svg_tag: 'product-card__placeholder-svg' }}
+        <div class="product-card__image-placeholder">
+          {{- 'product-1' | placeholder_svg_tag: 'placeholder-svg' -}}
         </div>
       {%- endif -%}
 
-      {%- if product.compare_at_price > product.price and product.available -%}
+      {%- if has_secondary -%}
+        {%- render 'lazy-image',
+          image: secondary_image,
+          alt: product.title | append: ' — ' | append: 'collections.general.secondary_image' | t | escape,
+          class: 'product-card__image product-card__image--secondary',
+          sizes: '(min-width: 1440px) 360px, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
+          widths: '180, 360, 540, 720, 900, 1080'
+        -%}
+      {%- endif -%}
+    </a>
+
+    <!-- Badges -->
+    <div class="product-card__badges">
+      {%- if on_sale -%}
         <span class="product-card__badge product-card__badge--sale">
-          {{ 'products.product.on_sale' | t }}
+          {{- 'products.product.on_sale' | t -}}
         </span>
       {%- endif -%}
-
       {%- unless product.available -%}
         <span class="product-card__badge product-card__badge--sold-out">
-          {{ 'products.product.sold_out' | t }}
+          {{- 'products.product.sold_out' | t -}}
         </span>
       {%- endunless -%}
     </div>
 
-    <div class="product-card__info">
-      {%- if product.vendor != blank -%}
-        <p class="product-card__vendor">{{ product.vendor | escape }}</p>
-      {%- endif -%}
-
-      <h3 class="product-card__title">{{ product.title | escape }}</h3>
-
-      <div class="product-card__price">
-        {%- render 'price', product: product -%}
+    <!-- Quick add (grid only—shown on hover) -->
+    {%- if show_quick_add and product.available -%}
+      <div class="product-card__quick-add">
+        <button
+          type="button"
+          class="product-card__quick-add-btn"
+          data-quick-add="{{ variant.id }}"
+          aria-label="{{ 'products.product.add_to_cart' | t }} — {{ product.title | escape }}"
+        >
+          {%- render 'icon-cart' -%}
+          <span class="visually-hidden">{{ 'products.product.add_to_cart' | t }}</span>
+        </button>
       </div>
+    {%- endif -%}
+  </div>
 
-      {%- if product.has_only_default_variant == false and product.options.size <= 3 -%}
-        <div class="product-card__swatches">
-          {%- render 'variant-swatches', product: product -%}
-        </div>
+  <!-- Content (grid: below image; list: beside image) -->
+  <div class="product-card__content">
+    {%- if show_vendor -%}
+      <p class="product-card__vendor">{{ product.vendor | escape }}</p>
+    {%- endif -%}
+
+    <h3 class="product-card__title">
+      <a href="{{ product.url }}" class="product-card__title-link">
+        {{- product.title | escape -}}
+      </a>
+    </h3>
+
+    {%- render 'price', product: product -%}
+
+    {%- if show_color_swatches -%}
+      <div class="product-card__swatches">
+        {%- render 'variant-swatches',
+          product: product,
+          context: 'card',
+          option_name: 'Color'
+        -%}
+      </div>
+    {%- endif -%}
+
+    <!-- List view extras -->
+    <div class="product-card__list-extras">
+      {%- if product.description != blank -%}
+        <p class="product-card__description">
+          {{- product.description | strip_html | truncatewords: 25 -}}
+        </p>
       {%- endif -%}
+
+      <div class="product-card__list-actions">
+        {%- if product.available -%}
+          <a
+            href="{{ product.url }}"
+            class="btn btn--accent btn--small"
+            {% unless product.has_only_default_variant %}
+              aria-label="{{ 'products.product.select_options' | t }} — {{ product.title | escape }}"
+            {% endunless %}
+          >
+            {%- if product.has_only_default_variant -%}
+              {{- 'products.product.add_to_cart' | t -}}
+            {%- else -%}
+              {{- 'products.product.select_options' | t -}}
+            {%- endif -%}
+          </a>
+        {%- else -%}
+          <span class="product-card__unavailable">
+            {{- 'products.product.sold_out' | t -}}
+          </span>
+        {%- endif -%}
+      </div>
     </div>
-  </a>
-</div>
+  </div>
+</article>

@@ -1150,6 +1150,495 @@
   };
 
   // ============================================================
+  // Collection Filters
+  // ============================================================
+  var CollectionFilters = {
+    container: null,
+    filtersForm: null,
+    productGrid: null,
+    sortSelect: null,
+    viewButtons: null,
+    activeFiltersContainer: null,
+    filterToggleBtn: null,
+    filterPanel: null,
+    filterOverlay: null,
+    filterCloseBtn: null,
+    loadMoreBtn: null,
+    loadMoreSpinner: null,
+    config: null,
+
+    init: function () {
+      var self = this;
+      var containers = qsa('.main-collection');
+
+      containers.forEach(function (el) {
+        self.initInstance(el);
+      });
+    },
+
+    initInstance: function (el) {
+      var self = this;
+      var configEl = qs('[data-collection-config]', el);
+      if (!configEl) return;
+
+      try {
+        this.config = JSON.parse(configEl.textContent);
+      } catch (e) {
+        console.warn('[Solaire] Could not parse collection config');
+        return;
+      }
+
+      this.container = el;
+      this.productGrid = qs('[data-product-grid]', el);
+      this.sortSelect = qs('[data-sort-select]', el);
+      this.viewButtons = qsa('[data-view]', el);
+      this.filterPanel = qs('[data-filters]', el);
+      this.filterOverlay = qs('[data-filter-overlay]', el);
+      this.filterToggleBtn = qs('[data-filter-toggle]', el);
+      this.filterCloseBtn = qs('[data-filter-close]', el);
+      this.filtersForm = qs('[data-filters-form]', el);
+      this.loadMoreBtn = qs('[data-load-more]', el);
+      this.loadMoreSpinner = qs('.main-collection__load-more-spinner', el);
+      this.activeFiltersContainer = qs('.main-collection__active-filters', el);
+
+      this.bindFilterInputs();
+      this.bindSort();
+      this.bindViewToggle();
+      this.bindMobileFilters();
+      this.bindActiveFilterPills();
+      this.bindLoadMore();
+      this.bindPriceRangeInputs();
+
+      // Restore view preference
+      this.restoreViewPreference();
+    },
+
+    // --- Filter Inputs ---
+    bindFilterInputs: function () {
+      var self = this;
+      var filterInputs = qsa('[data-filter-input]', this.filtersForm || this.container);
+
+      filterInputs.forEach(function (input) {
+        input.addEventListener('change', function () {
+          self.applyFilters();
+        });
+      });
+    },
+
+    bindPriceRangeInputs: function () {
+      var self = this;
+      var minInput = qs('[data-price-min]', this.container);
+      var maxInput = qs('[data-price-max]', this.container);
+
+      var debouncedApply = debounce(function () {
+        self.applyFilters();
+      }, 600);
+
+      if (minInput) {
+        minInput.addEventListener('input', debouncedApply);
+      }
+      if (maxInput) {
+        maxInput.addEventListener('input', debouncedApply);
+      }
+    },
+
+    // --- Apply Filters via URL ---
+    applyFilters: function () {
+      var self = this;
+      var form = this.filtersForm;
+      if (!form) return;
+
+      var params = new URLSearchParams(window.location.search);
+
+      // Remove existing filter params
+      var keysToRemove = [];
+      params.forEach(function (val, key) {
+        if (key.indexOf('filter.') === 0) {
+          keysToRemove.push(key);
+        }
+      });
+      keysToRemove.forEach(function (k) {
+        params.delete(k);
+      });
+
+      // Build new filter params from active checkboxes
+      var checkedInputs = qsa('[data-filter-input]:checked', form);
+      checkedInputs.forEach(function (input) {
+        params.append(input.name, input.value);
+      });
+
+      // Add price range filters
+      var minInput = qs('[data-price-min]', this.container);
+      var maxInput = qs('[data-price-max]', this.container);
+      if (minInput && minInput.value) {
+        // Convert dollars to cents
+        var minVal = Math.round(parseFloat(minInput.value) * 100);
+        params.set('filter.v.price.gte', minVal);
+      }
+      if (maxInput && maxInput.value) {
+        var maxVal = Math.round(parseFloat(maxInput.value) * 100);
+        params.set('filter.v.price.lte', maxVal);
+      }
+
+      // Preserve sort
+      if (this.sortSelect) {
+        params.set('sort_by', this.sortSelect.value);
+      }
+
+      // Remove page param
+      params.delete('page');
+
+      var newUrl = this.config.collectionUrl + '?' + params.toString();
+      this.fetchAndUpdate(newUrl, true);
+    },
+
+    // --- Sort ---
+    bindSort: function () {
+      var self = this;
+      if (!this.sortSelect) return;
+
+      this.sortSelect.addEventListener('change', function () {
+        var params = new URLSearchParams(window.location.search);
+        params.set('sort_by', self.sortSelect.value);
+        params.delete('page');
+
+        var newUrl = self.config.collectionUrl + '?' + params.toString();
+        self.fetchAndUpdate(newUrl, true);
+      });
+    },
+
+    // --- View Toggle ---
+    bindViewToggle: function () {
+      var self = this;
+      if (!this.viewButtons || this.viewButtons.length === 0) return;
+
+      this.viewButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var view = btn.getAttribute('data-view');
+          if (!view || btn.getAttribute('aria-checked') === 'true') return;
+
+          // Update active states
+          self.viewButtons.forEach(function (b) {
+            b.classList.remove('main-collection__view-btn--active');
+            b.setAttribute('aria-checked', 'false');
+          });
+          btn.classList.add('main-collection__view-btn--active');
+          btn.setAttribute('aria-checked', 'true');
+
+          // Update grid
+          if (self.productGrid) {
+            self.productGrid.classList.remove('main-collection__grid--view-grid', 'main-collection__grid--view-list');
+            self.productGrid.classList.add('main-collection__grid--view-' + view);
+          }
+
+          // Store preference
+          try {
+            sessionStorage.setItem('solaire_collection_view', view);
+          } catch (e) {}
+        });
+      });
+    },
+
+    restoreViewPreference: function () {
+      var preferredView = null;
+      try {
+        preferredView = sessionStorage.getItem('solaire_collection_view');
+      } catch (e) {}
+
+      if (preferredView && this.productGrid) {
+        var btn = qs('[data-view="' + preferredView + '"]', this.container);
+        if (btn) {
+          btn.click();
+        }
+      }
+    },
+
+    // --- Mobile Filter Drawer ---
+    bindMobileFilters: function () {
+      var self = this;
+
+      // Toggle button
+      if (this.filterToggleBtn && this.filterPanel) {
+        this.filterToggleBtn.addEventListener('click', function () {
+          self.openFilterDrawer();
+        });
+      }
+
+      // Close button
+      if (this.filterCloseBtn) {
+        this.filterCloseBtn.addEventListener('click', function () {
+          self.closeFilterDrawer();
+        });
+      }
+
+      // Overlay click
+      if (this.filterOverlay) {
+        this.filterOverlay.addEventListener('click', function () {
+          self.closeFilterDrawer();
+        });
+      }
+
+      // Escape key
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && self.filterPanel && self.filterPanel.classList.contains('is-open')) {
+          self.closeFilterDrawer();
+        }
+      });
+
+      // Trap focus inside filter drawer when open
+      if (this.filterPanel) {
+        trapFocus(this.filterPanel);
+      }
+    },
+
+    openFilterDrawer: function () {
+      if (this.filterPanel) {
+        this.filterPanel.classList.add('is-open');
+      }
+      if (this.filterOverlay) {
+        this.filterOverlay.classList.add('is-visible');
+      }
+      if (this.filterToggleBtn) {
+        this.filterToggleBtn.setAttribute('aria-expanded', 'true');
+      }
+      document.body.style.overflow = 'hidden';
+
+      // Focus first focusable element in drawer
+      if (this.filterPanel) {
+        var firstFocusable = qs('button, a[href], input, select', this.filterPanel);
+        if (firstFocusable) {
+          setTimeout(function () {
+            firstFocusable.focus();
+          }, 100);
+        }
+      }
+    },
+
+    closeFilterDrawer: function () {
+      if (this.filterPanel) {
+        this.filterPanel.classList.remove('is-open');
+      }
+      if (this.filterOverlay) {
+        this.filterOverlay.classList.remove('is-visible');
+      }
+      if (this.filterToggleBtn) {
+        this.filterToggleBtn.setAttribute('aria-expanded', 'false');
+      }
+      document.body.style.overflow = '';
+
+      // Return focus to toggle button
+      if (this.filterToggleBtn) {
+        this.filterToggleBtn.focus();
+      }
+    },
+
+    // --- Active Filter Pills ---
+    bindActiveFilterPills: function () {
+      var self = this;
+
+      // Delegate click on remove links
+      document.addEventListener('click', function (e) {
+        var removeLink = e.target.closest('[data-filter-remove]');
+        if (removeLink) {
+          e.preventDefault();
+          var href = removeLink.getAttribute('href');
+          if (href) {
+            self.fetchAndUpdate(href, true);
+          }
+        }
+
+        var clearLink = e.target.closest('[data-filter-clear-all]');
+        if (clearLink) {
+          e.preventDefault();
+          var clearHref = clearLink.getAttribute('href');
+          if (clearHref) {
+            self.fetchAndUpdate(clearHref, true);
+          }
+        }
+      });
+    },
+
+    // --- Load More ---
+    bindLoadMore: function () {
+      var self = this;
+      if (!this.loadMoreBtn) return;
+
+      this.loadMoreBtn.addEventListener('click', function () {
+        var currentPage = parseInt(self.loadMoreBtn.getAttribute('data-page'), 10) || 2;
+        var totalPages = parseInt(self.loadMoreBtn.getAttribute('data-total-pages'), 10) || 1;
+
+        if (currentPage > totalPages) return;
+
+        // Show spinner
+        self.loadMoreBtn.style.display = 'none';
+        if (self.loadMoreSpinner) {
+          self.loadMoreSpinner.classList.add('is-loading');
+        }
+
+        // Build URL with page param
+        var params = new URLSearchParams(window.location.search);
+        params.set('page', currentPage);
+        var loadUrl = self.config.collectionUrl + '?' + params.toString();
+
+        fetch(loadUrl)
+          .then(function (response) {
+            return response.text();
+          })
+          .then(function (html) {
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+            var newGrid = doc.querySelector('[data-product-grid]');
+
+            if (newGrid && self.productGrid) {
+              var newCards = qsa('.product-card', newGrid);
+              newCards.forEach(function (card) {
+                self.productGrid.appendChild(card);
+              });
+            }
+
+            // Update page counter
+            var nextPage = currentPage + 1;
+            self.loadMoreBtn.setAttribute('data-page', nextPage);
+
+            if (nextPage > totalPages) {
+              self.loadMoreBtn.remove();
+            }
+
+            // Update history
+            window.history.pushState({}, '', loadUrl);
+          })
+          .catch(function (err) {
+            console.error('[Solaire] Load more error:', err);
+          })
+          .finally(function () {
+            self.loadMoreBtn.style.display = '';
+            if (self.loadMoreSpinner) {
+              self.loadMoreSpinner.classList.remove('is-loading');
+            }
+          });
+      });
+    },
+
+    // --- AJAX Fetch & Update ---
+    fetchAndUpdate: function (url, pushState) {
+      var self = this;
+
+      // Show loading state
+      if (this.productGrid) {
+        this.productGrid.style.opacity = '0.5';
+        this.productGrid.style.pointerEvents = 'none';
+      }
+
+      fetch(url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(function (response) {
+          if (!response.ok) throw new Error('Network error');
+          return response.text();
+        })
+        .then(function (html) {
+          var parser = new DOMParser();
+          var doc = parser.parseFromString(html, 'text/html');
+
+          // Update product grid
+          var newGrid = doc.querySelector('[data-product-grid]');
+          if (newGrid && self.productGrid) {
+            self.productGrid.innerHTML = newGrid.innerHTML;
+          }
+
+          // Update active filter pills
+          var newFiltersBar = doc.querySelector('.main-collection__filter-bar');
+          if (newFiltersBar && self.activeFiltersContainer) {
+            var newActiveFilters = qs('.main-collection__active-filters', newFiltersBar);
+            var currentContainer = self.activeFiltersContainer;
+
+            if (newActiveFilters) {
+              currentContainer.innerHTML = newActiveFilters.innerHTML;
+            } else {
+              currentContainer.innerHTML = '';
+            }
+          }
+
+          // Update filter count badge
+          var newFilterToggle = doc.querySelector('[data-filter-toggle]');
+          var currentToggle = self.filterToggleBtn;
+          if (newFilterToggle && currentToggle) {
+            var newCount = qs('.main-collection__filter-count', newFilterToggle);
+            var currentCountSpan = qs('.main-collection__filter-count', currentToggle);
+
+            if (newCount) {
+              if (currentCountSpan) {
+                currentCountSpan.textContent = newCount.textContent;
+              } else {
+                var countEl = document.createElement('span');
+                countEl.className = 'main-collection__filter-count';
+                countEl.textContent = newCount.textContent;
+                currentToggle.appendChild(countEl);
+              }
+            } else if (currentCountSpan) {
+              currentCountSpan.remove();
+            }
+
+            // Update aria-expanded
+            currentToggle.setAttribute('aria-expanded', newFilterToggle.getAttribute('aria-expanded') || 'false');
+          }
+
+          // Update product count
+          var newCountEl = doc.querySelector('.main-collection__product-count');
+          var currentCountEl = qs('.main-collection__product-count', self.container);
+          if (newCountEl && currentCountEl) {
+            currentCountEl.textContent = newCountEl.textContent;
+          }
+
+          // Update load more button
+          var newLoadMore = doc.querySelector('[data-load-more]');
+          if (self.loadMoreBtn && newLoadMore) {
+            self.loadMoreBtn.setAttribute('data-page', newLoadMore.getAttribute('data-page'));
+            self.loadMoreBtn.setAttribute('data-total-pages', newLoadMore.getAttribute('data-total-pages'));
+            self.loadMoreBtn.style.display = '';
+          } else if (self.loadMoreBtn && !newLoadMore) {
+            self.loadMoreBtn.remove();
+            self.loadMoreBtn = null;
+          }
+
+          // Update pagination
+          var newPagination = doc.querySelector('.pagination');
+          var currentPagination = qs('.pagination', self.container);
+          if (newPagination && currentPagination) {
+            currentPagination.innerHTML = newPagination.innerHTML;
+          } else if (currentPagination) {
+            currentPagination.remove();
+          }
+
+          // Update URL
+          if (pushState !== false) {
+            window.history.pushState({}, '', url);
+          }
+
+          // Close mobile drawer after filter application
+          self.closeFilterDrawer();
+
+          // Scroll to toolbar on mobile
+          if (window.innerWidth < 1024) {
+            var toolbar = qs('.main-collection__toolbar', self.container);
+            if (toolbar) {
+              toolbar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }
+        })
+        .catch(function (err) {
+          console.error('[Solaire] Filter AJAX error:', err);
+        })
+        .finally(function () {
+          if (self.productGrid) {
+            self.productGrid.style.opacity = '';
+            self.productGrid.style.pointerEvents = '';
+          }
+        });
+    }
+  };
+
+  // ============================================================
   // Initialize Everything on DOM Ready
   // ============================================================
   function init() {
@@ -1168,6 +1657,7 @@
     AddToCart.init();
     StickyDetails.init();
     CopyLink.init();
+    CollectionFilters.init();
 
     // Expose for external use
     window.SOLAIRE = SOLAIRE;
@@ -1177,6 +1667,7 @@
     SOLAIRE.heroCarousel = HeroCarousel;
     SOLAIRE.productGallery = ProductGallery;
     SOLAIRE.imageZoom = ImageZoom;
+    SOLAIRE.collectionFilters = CollectionFilters;
   }
 
   if (document.readyState === 'loading') {
