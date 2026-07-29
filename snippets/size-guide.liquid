@@ -1,0 +1,62 @@
+{%- comment -%}
+  Solaire Theme — Size Guide Snippet
+  Accessible measurements table for eyewear: frame width, lens width, bridge width, temple length.
+  Uses metafields or settings-based defaults. ARIA-labeled table with proper headers.
+{%- endcomment -%}
+
+{%- liquid
+  assign product = product | default: nil
+  if product == nil
+    return
+  endif
+
+  assign frame_width = product.metafields.solaire.frame_width | default: section.settings.size_guide_frame_width | default: '140'
+  assign lens_width = product.metafields.solaire.lens_width | default: section.settings.size_guide_lens_width | default: '55'
+  assign bridge_width = product.metafields.solaire.bridge_width | default: section.settings.size_guide_bridge_width | default: '18'
+  assign temple_length = product.metafields.solaire.temple_length | default: section.settings.size_guide_temple_length | default: '145'
+  assign unit = 'mm'
+-%}
+
+<div
+  class="size-guide"
+  id="SizeGuide-{{ section.id }}"
+  role="region"
+  aria-labelledby="SizeGuideHeading-{{ section.id }}"
+>
+  <table class="size-guide__table" aria-label="{{ 'products.product.size_guide_table' | t }}">
+    <caption
+      id="SizeGuideHeading-{{ section.id }}"
+      class="size-guide__caption"
+    >
+      {{ 'products.product.measurements' | t }}
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">{{ 'products.product.measurement' | t }}</th>
+        <th scope="col">{{ 'products.product.value' | t }} ({{ unit }})</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">{{ 'products.product.frame_width' | t }}</th>
+        <td>{{ frame_width }}</td>
+      </tr>
+      <tr>
+        <th scope="row">{{ 'products.product.lens_width' | t }}</th>
+        <td>{{ lens_width }}</td>
+      </tr>
+      <tr>
+        <th scope="row">{{ 'products.product.bridge_width' | t }}</th>
+        <td>{{ bridge_width }}</td>
+      </tr>
+      <tr>
+        <th scope="row">{{ 'products.product.temple_length' | t }}</th>
+        <td>{{ temple_length }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="size-guide__disclaimer">
+    {{ 'products.product.measurements_disclaimer' | t }}
+  </p>
+</div>
