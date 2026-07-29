@@ -1,5 +1,11 @@
 {
   "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar"
+    },
+    "header": {
+      "type": "header"
+    },
     "hero-banner": {
       "type": "hero-banner"
     },
@@ -14,13 +20,19 @@
     },
     "newsletter": {
       "type": "newsletter"
+    },
+    "footer": {
+      "type": "footer"
     }
   },
   "order": [
+    "announcement-bar",
+    "header",
     "hero-banner",
     "featured-collection",
     "image-with-text",
     "testimonials",
-    "newsletter"
+    "newsletter",
+    "footer"
   ]
 }

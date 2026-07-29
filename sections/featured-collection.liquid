@@ -1,6 +1,6 @@
 {%- comment -%}
   Solaire Theme — Featured Collection Section
-  Displays a product grid from a selected collection.
+  Product showcase grid from a selected collection with hover effects and "view all" CTA.
 {%- endcomment -%}
 
 {%- liquid
@@ -8,35 +8,42 @@
   assign collection = collections[collection_handle]
   assign products_limit = section.settings.products_to_show | default: 4
   assign grid_columns = section.settings.grid_columns | default: 4
+  assign heading = section.settings.heading
+  assign description = section.settings.description
+  assign show_view_all = section.settings.show_view_all
 -%}
 
-<section class="featured-collection section-spacing" data-section-id="{{ section.id }}">
+<section class="featured-collection section-spacing{% if section.settings.background != 'none' %} featured-collection--bg-{{ section.settings.background }}{% endif %}" data-section-id="{{ section.id }}">
   <div class="page-width">
-    {%- if section.settings.heading != blank -%}
-      <h2 class="featured-collection__heading section-heading">{{ section.settings.heading | escape }}</h2>
+    {%- if heading != blank -%}
+      <h2 class="section-heading featured-collection__heading">{{ heading | escape }}</h2>
     {%- endif -%}
 
-    {%- if section.settings.subheading != blank -%}
-      <p class="featured-collection__subheading section-subheading">{{ section.settings.subheading | escape }}</p>
+    {%- if description != blank -%}
+      <div class="section-subheading featured-collection__description rte">{{ description }}</div>
     {%- endif -%}
 
     {%- if collection != blank and collection.products_count > 0 -%}
       <div class="featured-collection__grid featured-collection__grid--cols-{{ grid_columns }}">
         {%- for product in collection.products limit: products_limit -%}
-          {%- render 'product-card', product: product -%}
+          {%- render 'product-card',
+            product: product,
+            show_secondary_image: section.settings.show_secondary_image
+          -%}
         {%- endfor -%}
       </div>
 
-      {%- if section.settings.show_view_all and collection.url != blank -%}
+      {%- if show_view_all and collection.url != blank -%}
         <div class="featured-collection__cta">
           <a href="{{ collection.url }}" class="btn btn--outline">
-            {{ 'sections.featured_collection.view_all' | t }}
+            {{ 'sections.featured-collection.view_all' | t }}
+            {%- render 'icon-arrow-right' -%}
           </a>
         </div>
       {%- endif -%}
     {%- else -%}
       <div class="featured-collection__empty">
-        <p>{{ 'sections.featured_collection.empty' | t }}</p>
+        <p>{{ 'sections.featured-collection.empty' | t }}</p>
       </div>
     {%- endif -%}
   </div>
@@ -54,9 +61,9 @@
       "default": "Shop the collection"
     },
     {
-      "type": "text",
-      "id": "subheading",
-      "label": "t:sections.featured-collection.settings.subheading.label"
+      "type": "richtext",
+      "id": "description",
+      "label": "t:sections.featured-collection.settings.description.label"
     },
     {
       "type": "collection",
@@ -85,9 +92,25 @@
     },
     {
       "type": "checkbox",
+      "id": "show_secondary_image",
+      "label": "t:sections.featured-collection.settings.show_secondary_image.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
       "id": "show_view_all",
       "label": "t:sections.featured-collection.settings.show_view_all.label",
       "default": true
+    },
+    {
+      "type": "select",
+      "id": "background",
+      "label": "t:sections.featured-collection.settings.background.label",
+      "options": [
+        { "value": "none", "label": "t:sections.featured-collection.settings.background.options.none" },
+        { "value": "secondary", "label": "t:sections.featured-collection.settings.background.options.secondary" }
+      ],
+      "default": "none"
     }
   ],
   "presets": [

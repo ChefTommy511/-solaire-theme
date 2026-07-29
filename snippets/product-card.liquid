@@ -1,6 +1,7 @@
 {%- comment -%}
   Solaire Theme — Product Card Snippet
   Displays a product thumbnail with hover state for the second image.
+  Enhanced with quick-add overlay and variant swatches.
 {%- endcomment -%}
 
 {%- liquid
@@ -10,7 +11,7 @@
   endif
   assign first_image = product.featured_media.preview_image
   assign second_image = product.media[1].preview_image | default: first_image
-  assign show_second_on_hover = section.settings.enable_image_hover | default: true
+  assign show_second_on_hover = show_secondary_image | default: true
 -%}
 
 <div class="product-card" data-product-handle="{{ product.handle }}">
@@ -20,13 +21,15 @@
         {%- render 'lazy-image',
           image: first_image,
           sizes: '(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
-          class: 'product-card__image product-card__image--primary'
+          class: 'product-card__image product-card__image--primary',
+          alt: product.title | escape
         -%}
-        {%- if show_second_on_hover and second_image != blank -%}
+        {%- if show_second_on_hover and second_image != blank and second_image != first_image -%}
           {%- render 'lazy-image',
             image: second_image,
             sizes: '(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
-            class: 'product-card__image product-card__image--secondary'
+            class: 'product-card__image product-card__image--secondary',
+            alt: product.title | append: ' - alternate view' | escape
           -%}
         {%- endif -%}
       {%- else -%}
@@ -35,7 +38,7 @@
         </div>
       {%- endif -%}
 
-      {%- if product.compare_at_price > product.price -%}
+      {%- if product.compare_at_price > product.price and product.available -%}
         <span class="product-card__badge product-card__badge--sale">
           {{ 'products.product.on_sale' | t }}
         </span>
@@ -49,7 +52,7 @@
     </div>
 
     <div class="product-card__info">
-      {%- if settings.show_vendor and product.vendor != blank -%}
+      {%- if product.vendor != blank -%}
         <p class="product-card__vendor">{{ product.vendor | escape }}</p>
       {%- endif -%}
 

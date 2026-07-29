@@ -426,6 +426,218 @@
   };
 
   // ============================================================
+  // Hero Banner Carousel
+  // ============================================================
+  var HeroCarousel = {
+    instances: [],
+
+    init: function () {
+      var self = this;
+      var carousels = qsa('.hero-banner--carousel');
+
+      carousels.forEach(function (el) {
+        var instance = self.createInstance(el);
+        if (instance) {
+          self.instances.push(instance);
+        }
+      });
+    },
+
+    createInstance: function (el) {
+      var slides = qsa('.hero-banner__slide', el);
+      var dots = qsa('.hero-banner__dot', el);
+      var prevBtn = qs('[data-hero-prev]', el);
+      var nextBtn = qs('[data-hero-next]', el);
+      var pauseBtn = qs('[data-hero-pause]', el);
+      var autoplay = el.getAttribute('data-autoplay') === 'true';
+      var speed = parseInt(el.getAttribute('data-autoplay-speed'), 10) || 5000;
+
+      if (slides.length < 2) return null;
+
+      var currentIndex = 0;
+      var intervalId = null;
+      var isPaused = false;
+
+      var instance = {
+        el: el,
+        slides: slides,
+        dots: dots,
+        currentIndex: currentIndex,
+        goTo: goTo,
+        next: next,
+        prev: prev,
+        pause: pause,
+        resume: resume,
+        destroy: destroy
+      };
+
+      function goTo(index) {
+        if (index === currentIndex) return;
+        if (index < 0) index = slides.length - 1;
+        if (index >= slides.length) index = 0;
+
+        // Deactivate current
+        slides[currentIndex].classList.remove('hero-banner__slide--active');
+        slides[currentIndex].setAttribute('aria-hidden', 'true');
+        if (dots[currentIndex]) {
+          dots[currentIndex].classList.remove('hero-banner__dot--active');
+          dots[currentIndex].setAttribute('aria-selected', 'false');
+        }
+
+        // Activate new
+        currentIndex = index;
+        slides[currentIndex].classList.add('hero-banner__slide--active');
+        slides[currentIndex].setAttribute('aria-hidden', 'false');
+        if (dots[currentIndex]) {
+          dots[currentIndex].classList.add('hero-banner__dot--active');
+          dots[currentIndex].setAttribute('aria-selected', 'true');
+        }
+
+        instance.currentIndex = currentIndex;
+      }
+
+      function next() {
+        goTo(currentIndex + 1);
+      }
+
+      function prev() {
+        goTo(currentIndex - 1);
+      }
+
+      function pause() {
+        isPaused = true;
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        if (pauseBtn) {
+          pauseBtn.setAttribute('aria-label', pauseBtn.getAttribute('aria-label').replace('Pause', 'Play'));
+        }
+      }
+
+      function resume() {
+        isPaused = false;
+        if (autoplay && !intervalId) {
+          intervalId = setInterval(next, speed);
+        }
+        if (pauseBtn) {
+          pauseBtn.setAttribute('aria-label', pauseBtn.getAttribute('aria-label').replace('Play', 'Pause'));
+        }
+      }
+
+      function destroy() {
+        if (intervalId) clearInterval(intervalId);
+      }
+
+      // Event listeners
+      if (prevBtn) prevBtn.addEventListener('click', prev);
+      if (nextBtn) nextBtn.addEventListener('click', next);
+
+      if (dots.length) {
+        dots.forEach(function (dot, i) {
+          dot.addEventListener('click', function () {
+            goTo(i);
+          });
+        });
+      }
+
+      if (pauseBtn) {
+        pauseBtn.addEventListener('click', function () {
+          if (isPaused) {
+            resume();
+          } else {
+            pause();
+          }
+        });
+      }
+
+      // Pause on hover
+      el.addEventListener('mouseenter', function () {
+        if (autoplay && !isPaused) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      });
+
+      el.addEventListener('mouseleave', function () {
+        if (autoplay && !isPaused && !intervalId) {
+          intervalId = setInterval(next, speed);
+        }
+      });
+
+      // Touch/swipe support
+      var touchStartX = 0;
+      var touchEndX = 0;
+
+      el.addEventListener('touchstart', function (e) {
+        touchStartX = e.changedTouches[0].screenX;
+      }, { passive: true });
+
+      el.addEventListener('touchend', function (e) {
+        touchEndX = e.changedTouches[0].screenX;
+        var diff = touchStartX - touchEndX;
+        if (Math.abs(diff) > 50) {
+          if (diff > 0) {
+            next();
+          } else {
+            prev();
+          }
+        }
+      }, { passive: true });
+
+      // Keyboard navigation
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prev();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          next();
+        }
+      });
+
+      // Autoplay
+      if (autoplay) {
+        intervalId = setInterval(next, speed);
+      }
+
+      return instance;
+    }
+  };
+
+  // ============================================================
+  // Scroll-triggered animations (Intersection Observer)
+  // ============================================================
+  var ScrollReveal = {
+    observer: null,
+
+    init: function () {
+      if (!('IntersectionObserver' in window)) return;
+
+      var self = this;
+      this.observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-revealed');
+              self.observer.unobserve(entry.target);
+            }
+          });
+        },
+        {
+          threshold: 0.15,
+          rootMargin: '0px 0px -40px 0px'
+        }
+      );
+
+      var elements = qsa('[data-reveal]');
+      elements.forEach(function (el) {
+        self.observer.observe(el);
+      });
+    }
+  };
+
+  // ============================================================
   // Initialize Everything on DOM Ready
   // ============================================================
   function init() {
@@ -435,12 +647,15 @@
     StickyHeader.init();
     AnnouncementBar.init();
     ShopifySections.init();
+    HeroCarousel.init();
+    ScrollReveal.init();
 
     // Expose for external use
     window.SOLAIRE = SOLAIRE;
     SOLAIRE.cartDrawer = CartDrawer;
     SOLAIRE.mobileNav = MobileNav;
     SOLAIRE.searchOverlay = SearchOverlay;
+    SOLAIRE.heroCarousel = HeroCarousel;
   }
 
   if (document.readyState === 'loading') {
