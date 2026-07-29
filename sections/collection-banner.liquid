@@ -1,0 +1,173 @@
+{%- comment -%}
+  Solaire Theme — Collection Banner Section
+  Full-width hero banner for collection pages.
+  Displays collection image, title, description, and breadcrumbs.
+{%- endcomment -%}
+
+{%- liquid
+  assign collection = collection
+  assign show_breadcrumbs = section.settings.show_breadcrumbs
+  assign show_description = section.settings.show_description
+  assign banner_height = section.settings.banner_height | default: 'medium'
+  assign overlay_opacity = section.settings.overlay_opacity | default: 20
+  assign text_color = section.settings.text_color | default: 'light'
+  assign text_alignment = section.settings.text_alignment | default: 'center'
+  assign breadcrumb_color = section.settings.breadcrumb_color | default: 'light'
+
+  assign banner_image = collection.image | default: section.settings.default_banner_image
+  assign has_image = false
+  if banner_image != blank
+    assign has_image = true
+  endif
+-%}
+
+<div
+  class="collection-banner collection-banner--{{ banner_height }} collection-banner--text-{{ text_alignment }}"
+  data-section-id="{{ section.id }}"
+>
+  {%- if has_image -%}
+    <div class="collection-banner__media">
+      {%- render 'lazy-image',
+        image: banner_image,
+        alt: collection.title | escape,
+        class: 'collection-banner__image',
+        sizes: '100vw',
+        widths: '375, 550, 750, 1100, 1500, 1780, 2000, 2400, 3000'
+      -%}
+    </div>
+  {%- endif -%}
+
+  <div
+    class="collection-banner__overlay"
+    style="--overlay-opacity: {{ overlay_opacity | divided_by: 100.0 }};"
+  ></div>
+
+  <div class="collection-banner__content collection-banner__content--{{ text_color }}">
+    {%- if show_breadcrumbs -%}
+      <nav
+        class="collection-banner__breadcrumbs"
+        role="navigation"
+        aria-label="{{ 'collections.banner.breadcrumbs_label' | t }}"
+      >
+        <ol class="collection-banner__breadcrumbs-list">
+          <li class="collection-banner__breadcrumb-item">
+            <a href="{{ routes.root_url }}" class="collection-banner__breadcrumb-link">
+              {{- 'general.breadcrumbs.home' | t -}}
+            </a>
+            <span class="collection-banner__breadcrumb-separator" aria-hidden="true">
+              {%- render 'icon-chevron-right' -%}
+            </span>
+          </li>
+          <li class="collection-banner__breadcrumb-item">
+            <a href="{{ routes.collections_url }}" class="collection-banner__breadcrumb-link">
+              {{- 'collections.banner.collections' | t -}}
+            </a>
+            <span class="collection-banner__breadcrumb-separator" aria-hidden="true">
+              {%- render 'icon-chevron-right' -%}
+            </span>
+          </li>
+          <li class="collection-banner__breadcrumb-item">
+            <span class="collection-banner__breadcrumb-current" aria-current="page">
+              {{- collection.title | escape -}}
+            </span>
+          </li>
+        </ol>
+      </nav>
+    {%- endif -%}
+
+    <h1 class="collection-banner__title">
+      {{- collection.title | escape -}}
+    </h1>
+
+    {%- if show_description and collection.description != blank -%}
+      <div class="collection-banner__description rte">
+        {{ collection.description }}
+      </div>
+    {%- endif -%}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Collection Banner",
+  "class": "section-collection-banner",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "default_banner_image",
+      "label": "Default banner image",
+      "info": "Displayed when the collection has no image set. Recommended size: 2880 × 800px."
+    },
+    {
+      "type": "select",
+      "id": "banner_height",
+      "label": "Banner height",
+      "default": "medium",
+      "options": [
+        { "value": "small", "label": "Small (240px)" },
+        { "value": "medium", "label": "Medium (360px)" },
+        { "value": "large", "label": "Large (480px)" },
+        { "value": "xlarge", "label": "Extra large (600px)" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "text_alignment",
+      "label": "Text alignment",
+      "default": "center",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "right", "label": "Right" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "light",
+      "options": [
+        { "value": "light", "label": "Light" },
+        { "value": "dark", "label": "Dark" }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "label": "Image overlay opacity",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 20
+    },
+    {
+      "type": "checkbox",
+      "id": "show_breadcrumbs",
+      "label": "Show breadcrumbs",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "Show collection description",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "breadcrumb_color",
+      "label": "Breadcrumb color",
+      "default": "light",
+      "options": [
+        { "value": "light", "label": "Light" },
+        { "value": "dark", "label": "Dark" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Collection Banner"
+    }
+  ]
+}
+{% endschema %}
