@@ -78,47 +78,21 @@
     },
     "hero-banner": {
       "name": "Hero Banner",
+      "label": "Hero banner carousel",
+      "carousel": "carousel",
+      "slide_label": "Slide {{ number }} of {{ total }}",
+      "slide_navigation": "Slide navigation",
+      "previous_slide": "Previous slide",
+      "next_slide": "Next slide",
+      "go_to_slide": "Go to slide {{ number }}",
+      "pause": "Pause autoplay",
+      "default_heading": "Elevate your look",
+      "default_subheading": "Premium eyewear designed for those who see differently",
+      "default_cta": "Shop collection",
       "presets": {
         "name": "Hero Banner"
       },
       "settings": {
-        "image": {
-          "label": "Background image"
-        },
-        "mobile_image": {
-          "label": "Mobile background image"
-        },
-        "heading": {
-          "label": "Heading"
-        },
-        "subheading": {
-          "label": "Subheading"
-        },
-        "button_text": {
-          "label": "Button text"
-        },
-        "button_link": {
-          "label": "Button link"
-        },
-        "button_style": {
-          "label": "Button style",
-          "options": {
-            "primary": "Primary",
-            "accent": "Accent",
-            "outline": "Outline"
-          }
-        },
-        "content_position": {
-          "label": "Content position",
-          "options": {
-            "center": "Center",
-            "left": "Left",
-            "right": "Right"
-          }
-        },
-        "overlay_opacity": {
-          "label": "Overlay opacity"
-        },
         "section_height": {
           "label": "Section height",
           "options": {
@@ -126,6 +100,67 @@
             "medium": "Medium",
             "large": "Large",
             "fullscreen": "Fullscreen"
+          }
+        },
+        "autoplay": {
+          "label": "Auto-rotate slides"
+        },
+        "autoplay_speed": {
+          "label": "Change slides every"
+        },
+        "transition": {
+          "label": "Transition style",
+          "options": {
+            "crossfade": "Crossfade",
+            "slide": "Slide"
+          }
+        }
+      },
+      "blocks": {
+        "slide": {
+          "name": "Slide",
+          "settings": {
+            "image": {
+              "label": "Background image"
+            },
+            "mobile_image": {
+              "label": "Mobile background image",
+              "info": "Optional. Falls back to desktop image if not set."
+            },
+            "heading": {
+              "label": "Heading"
+            },
+            "subheading": {
+              "label": "Subheading"
+            },
+            "button_text": {
+              "label": "Button text"
+            },
+            "button_link": {
+              "label": "Button link"
+            },
+            "text_alignment": {
+              "label": "Text alignment",
+              "options": {
+                "left": "Left",
+                "center": "Center",
+                "right": "Right"
+              }
+            },
+            "vertical_alignment": {
+              "label": "Vertical alignment",
+              "options": {
+                "top": "Top",
+                "middle": "Middle",
+                "bottom": "Bottom"
+              }
+            },
+            "overlay_opacity": {
+              "label": "Overlay opacity"
+            },
+            "overlay_color": {
+              "label": "Overlay color"
+            }
           }
         }
       }
@@ -141,8 +176,8 @@
         "heading": {
           "label": "Heading"
         },
-        "subheading": {
-          "label": "Subheading"
+        "description": {
+          "label": "Description"
         },
         "collection": {
           "label": "Collection"
@@ -151,10 +186,20 @@
           "label": "Products to show"
         },
         "grid_columns": {
-          "label": "Columns"
+          "label": "Columns on desktop"
+        },
+        "show_secondary_image": {
+          "label": "Show second image on hover"
         },
         "show_view_all": {
           "label": "Show \"View all\" button"
+        },
+        "background": {
+          "label": "Background",
+          "options": {
+            "none": "None",
+            "secondary": "Secondary"
+          }
         }
       }
     },
@@ -167,11 +212,35 @@
         "image": {
           "label": "Image"
         },
+        "image_alt": {
+          "label": "Image alt text",
+          "info": "Describe the image for accessibility and SEO."
+        },
+        "image_ratio": {
+          "label": "Image aspect ratio",
+          "options": {
+            "3-2": "Landscape (3:2)",
+            "1-1": "Square (1:1)",
+            "4-5": "Portrait (4:5)",
+            "2-3": "Tall portrait (2:3)"
+          }
+        },
+        "image_fill": {
+          "label": "Fill image container"
+        },
         "layout": {
           "label": "Layout",
           "options": {
             "image_left": "Image left",
             "image_right": "Image right"
+          }
+        },
+        "content_alignment": {
+          "label": "Content alignment",
+          "options": {
+            "top": "Top",
+            "middle": "Middle",
+            "bottom": "Bottom"
           }
         },
         "heading": {
@@ -186,12 +255,12 @@
         "button_link": {
           "label": "Button link"
         },
-        "button_style": {
-          "label": "Button style",
+        "background": {
+          "label": "Background",
           "options": {
-            "primary": "Primary",
-            "accent": "Accent",
-            "outline": "Outline"
+            "none": "None",
+            "secondary": "Secondary",
+            "dark": "Dark"
           }
         }
       }
@@ -236,14 +305,21 @@
         "heading": {
           "label": "Heading"
         },
-        "subtext": {
-          "label": "Subtext"
+        "subheading": {
+          "label": "Subheading"
+        },
+        "button_text": {
+          "label": "Button text"
+        },
+        "placeholder_text": {
+          "label": "Email placeholder text"
         },
         "color_scheme": {
           "label": "Color scheme",
           "options": {
+            "dark": "Dark",
             "light": "Light",
-            "dark": "Dark"
+            "accent": "Gold accent"
           }
         }
       }
