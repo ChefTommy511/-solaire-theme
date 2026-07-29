@@ -1,0 +1,14 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-product"
+    },
+    "related-products": {
+      "type": "featured-collection"
+    }
+  },
+  "order": [
+    "main",
+    "related-products"
+  ]
+}

@@ -1,0 +1,57 @@
+{%- comment -%}
+  Solaire Theme — Newsletter Section
+  Email signup form for building the mailing list.
+{%- endcomment -%}
+
+<section class="newsletter section-spacing newsletter--{{ section.settings.color_scheme | default: 'dark' }}" data-section-id="{{ section.id }}">
+  <div class="page-width">
+    <div class="newsletter__inner">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="newsletter__heading">{{ section.settings.heading | escape }}</h2>
+      {%- endif -%}
+
+      {%- if section.settings.subtext != blank -%}
+        <p class="newsletter__subtext">{{ section.settings.subtext | escape }}</p>
+      {%- endif -%}
+
+      {%- render 'newsletter-form', section: section -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.newsletter.name",
+  "class": "section-newsletter",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:sections.newsletter.settings.heading.label",
+      "default": "Stay in the loop"
+    },
+    {
+      "type": "text",
+      "id": "subtext",
+      "label": "t:sections.newsletter.settings.subtext.label",
+      "default": "Be the first to know about new drops and exclusive offers."
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "label": "t:sections.newsletter.settings.color_scheme.label",
+      "options": [
+        { "value": "light", "label": "t:sections.newsletter.settings.color_scheme.options.light" },
+        { "value": "dark", "label": "t:sections.newsletter.settings.color_scheme.options.dark" }
+      ],
+      "default": "dark"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.newsletter.presets.name",
+      "category": "Promotional"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,42 @@
+{%- comment -%}
+  Solaire Theme — Lazy Image Snippet
+  Lazy-loaded responsive image with srcset, sizes, and aspect ratio support.
+{%- endcomment -%}
+
+{%- liquid
+  assign image = image | default: nil
+  if image == nil
+    return
+  endif
+
+  assign sizes = sizes | default: '100vw'
+  assign class = class | default: ''
+  assign alt = alt | default: image.alt | default: ''
+  assign loading = loading | default: 'lazy'
+  assign fetchpriority = fetchpriority | default: 'auto'
+  assign width = image.width
+  assign height = image.height
+  assign aspect_ratio = image.aspect_ratio
+-%}
+
+{%- if image != blank -%}
+  <img
+    src="{{ image | image_url: width: 600 }}"
+    srcset="
+      {{ image | image_url: width: 360 }} 360w,
+      {{ image | image_url: width: 600 }} 600w,
+      {{ image | image_url: width: 900 }} 900w,
+      {{ image | image_url: width: 1200 }} 1200w,
+      {{ image | image_url: width: 1800 }} 1800w,
+      {{ image | image_url: width: 2400 }} 2400w
+    "
+    sizes="{{ sizes }}"
+    alt="{{ alt | escape }}"
+    width="{{ width }}"
+    height="{{ height }}"
+    loading="{{ loading }}"
+    fetchpriority="{{ fetchpriority }}"
+    class="{{ class }}"
+    style="aspect-ratio: {{ aspect_ratio }};"
+  >
+{%- endif -%}

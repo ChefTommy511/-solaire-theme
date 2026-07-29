@@ -1,0 +1,32 @@
+{%- comment -%}
+  Solaire Theme — Currency Selector Snippet
+  Localization currency/country picker.
+{%- endcomment -%}
+
+{%- if localization.available_countries.size > 1 -%}
+  <localization-form>
+    {%- form 'localization', class: 'currency-selector' -%}
+      <label for="CountrySelector" class="visually-hidden">
+        {{ 'general.localization.country_label' | t }}
+      </label>
+
+      <select
+        id="CountrySelector"
+        name="country_code"
+        class="currency-selector__select"
+        onchange="this.form.submit()"
+      >
+        {%- for country in localization.available_countries -%}
+          <option
+            value="{{ country.iso_code }}"
+            {% if country == localization.country %}selected{% endif %}
+          >
+            {{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})
+          </option>
+        {%- endfor -%}
+      </select>
+
+      {%- render 'icon-arrow-down' -%}
+    {%- endform -%}
+  </localization-form>
+{%- endif -%}

@@ -1,0 +1,117 @@
+{%- comment -%}
+  Solaire Theme — Footer Section
+  Premium footer with newsletter, navigation columns, social icons, and payment badges.
+{%- endcomment -%}
+
+{%- liquid
+  assign color_scheme = settings.footer_color_scheme | default: 'dark'
+  assign show_social = settings.footer_show_social
+  assign show_newsletter = settings.footer_show_newsletter
+  assign show_payment = settings.footer_show_payment_icons
+  assign show_lang = settings.footer_show_language_selector
+  assign show_currency = settings.footer_show_currency_selector
+-%}
+
+<footer
+  class="site-footer site-footer--{{ color_scheme }}"
+  role="contentinfo"
+  aria-label="{{ 'general.accessibility.footer' | t }}"
+>
+  <div class="site-footer__inner page-width">
+    {%- comment -%} Top row: newsletter + nav columns {%- endcomment -%}
+    <div class="site-footer__top">
+      {%- if show_newsletter -%}
+        <div class="site-footer__newsletter">
+          {%- if settings.footer_newsletter_heading != blank -%}
+            <h3 class="site-footer__newsletter-heading">
+              {{ settings.footer_newsletter_heading }}
+            </h3>
+          {%- endif -%}
+          {%- if settings.footer_newsletter_subtext != blank -%}
+            <p class="site-footer__newsletter-subtext">
+              {{ settings.footer_newsletter_subtext }}
+            </p>
+          {%- endif -%}
+          {%- render 'newsletter-form' -%}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} Footer navigation columns {%- endcomment -%}
+      <div class="site-footer__nav-columns">
+        {%- for link in linklists.footer.links -%}
+          <div class="site-footer__nav-column">
+            <h4 class="site-footer__nav-heading">{{ link.title | escape }}</h4>
+            {%- if link.links != blank -%}
+              <ul class="site-footer__nav-list" role="list">
+                {%- for child_link in link.links -%}
+                  <li class="site-footer__nav-item">
+                    <a href="{{ child_link.url }}" class="site-footer__nav-link">
+                      {{ child_link.title | escape }}
+                    </a>
+                  </li>
+                {%- endfor -%}
+              </ul>
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
+      </div>
+    </div>
+
+    {%- comment -%} Bottom row: social, payment icons, selectors, copyright {%- endcomment -%}
+    <div class="site-footer__bottom">
+      <div class="site-footer__bottom-left">
+        {%- if show_social -%}
+          {%- render 'social-icons' -%}
+        {%- endif -%}
+      </div>
+
+      <div class="site-footer__bottom-center">
+        {%- if show_lang or show_currency -%}
+          <div class="site-footer__selectors">
+            {%- if show_lang and localization.available_languages.size > 1 -%}
+              {%- render 'language-selector' -%}
+            {%- endif -%}
+            {%- if show_currency and localization.available_countries.size > 1 -%}
+              {%- render 'currency-selector' -%}
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div class="site-footer__bottom-right">
+        {%- if show_payment -%}
+          <div class="site-footer__payment-icons">
+            {%- for type in shop.enabled_payment_types -%}
+              {{ type | payment_type_svg_tag: class: 'site-footer__payment-icon' }}
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+
+        <p class="site-footer__copyright">
+          {{ settings.footer_copyright_text }}
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "t:sections.footer.name",
+  "class": "section-footer",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "footer_menu",
+      "label": "t:sections.footer.settings.footer_menu.label",
+      "default": "footer"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_payment_icons_override",
+      "label": "t:sections.footer.settings.show_payment_icons_override.label",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

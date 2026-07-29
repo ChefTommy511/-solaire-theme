@@ -1,0 +1,69 @@
+{%- comment -%}
+  Solaire Theme — Product Card Snippet
+  Displays a product thumbnail with hover state for the second image.
+{%- endcomment -%}
+
+{%- liquid
+  assign product = product | default: nil
+  if product == nil
+    return
+  endif
+  assign first_image = product.featured_media.preview_image
+  assign second_image = product.media[1].preview_image | default: first_image
+  assign show_second_on_hover = section.settings.enable_image_hover | default: true
+-%}
+
+<div class="product-card" data-product-handle="{{ product.handle }}">
+  <a href="{{ product.url }}" class="product-card__link" aria-label="{{ product.title | escape }}">
+    <div class="product-card__media">
+      {%- if first_image != blank -%}
+        {%- render 'lazy-image',
+          image: first_image,
+          sizes: '(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
+          class: 'product-card__image product-card__image--primary'
+        -%}
+        {%- if show_second_on_hover and second_image != blank -%}
+          {%- render 'lazy-image',
+            image: second_image,
+            sizes: '(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
+            class: 'product-card__image product-card__image--secondary'
+          -%}
+        {%- endif -%}
+      {%- else -%}
+        <div class="product-card__placeholder">
+          {{ 'product-1' | placeholder_svg_tag: 'product-card__placeholder-svg' }}
+        </div>
+      {%- endif -%}
+
+      {%- if product.compare_at_price > product.price -%}
+        <span class="product-card__badge product-card__badge--sale">
+          {{ 'products.product.on_sale' | t }}
+        </span>
+      {%- endif -%}
+
+      {%- unless product.available -%}
+        <span class="product-card__badge product-card__badge--sold-out">
+          {{ 'products.product.sold_out' | t }}
+        </span>
+      {%- endunless -%}
+    </div>
+
+    <div class="product-card__info">
+      {%- if settings.show_vendor and product.vendor != blank -%}
+        <p class="product-card__vendor">{{ product.vendor | escape }}</p>
+      {%- endif -%}
+
+      <h3 class="product-card__title">{{ product.title | escape }}</h3>
+
+      <div class="product-card__price">
+        {%- render 'price', product: product -%}
+      </div>
+
+      {%- if product.has_only_default_variant == false and product.options.size <= 3 -%}
+        <div class="product-card__swatches">
+          {%- render 'variant-swatches', product: product -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </a>
+</div>

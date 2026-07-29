@@ -1,0 +1,32 @@
+{%- comment -%}
+  Solaire Theme — Language Selector Snippet
+  Localization language picker.
+{%- endcomment -%}
+
+{%- if localization.available_languages.size > 1 -%}
+  <localization-form>
+    {%- form 'localization', class: 'language-selector' -%}
+      <label for="LanguageSelector" class="visually-hidden">
+        {{ 'general.localization.language_label' | t }}
+      </label>
+
+      <select
+        id="LanguageSelector"
+        name="locale_code"
+        class="language-selector__select"
+        onchange="this.form.submit()"
+      >
+        {%- for language in localization.available_languages -%}
+          <option
+            value="{{ language.iso_code }}"
+            {% if language == localization.language %}selected{% endif %}
+          >
+            {{ language.endonym_name | capitalize }}
+          </option>
+        {%- endfor -%}
+      </select>
+
+      {%- render 'icon-arrow-down' -%}
+    {%- endform -%}
+  </localization-form>
+{%- endif -%}

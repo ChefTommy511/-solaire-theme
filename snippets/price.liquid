@@ -1,0 +1,48 @@
+{%- comment -%}
+  Solaire Theme — Price Snippet
+  Formatted price display with compare-at price and sale badge.
+{%- endcomment -%}
+
+{%- liquid
+  assign product = product | default: nil
+  if product == nil
+    return
+  endif
+
+  assign target = product.selected_or_first_available_variant
+  assign compare_at_price = target.compare_at_price
+  assign price = target.price
+  assign on_sale = false
+  if compare_at_price > price
+    assign on_sale = true
+  endif
+
+  assign money_price = price | money
+  assign money_compare = compare_at_price | money
+-%}
+
+<span class="price{% if on_sale %} price--on-sale{% endif %}{% unless product.available %} price--sold-out{% endunless %}">
+  {%- if on_sale -%}
+    <span class="price__compare-at">
+      <span class="visually-hidden">{{ 'products.product.regular_price' | t }}</span>
+      <s>{{ money_compare }}</s>
+    </span>
+  {%- endif -%}
+
+  <span class="price__current">
+    <span class="visually-hidden">{{ 'products.product.price' | t }}</span>
+    {{ money_price }}
+  </span>
+
+  {%- if on_sale -%}
+    <span class="price__savings">
+      {{ 'products.product.you_save' | t: amount: compare_at_price | minus: price | money }}
+    </span>
+  {%- endif -%}
+
+  {%- if target.unit_price_measurement -%}
+    <span class="price__unit">
+      {{ target.unit_price | money }} / {{ target.unit_price_measurement.reference_value }}{{ target.unit_price_measurement.reference_unit }}
+    </span>
+  {%- endif -%}
+</span>

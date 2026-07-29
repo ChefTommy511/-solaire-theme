@@ -1,0 +1,144 @@
+{%- comment -%}
+  Solaire Theme — Header Section
+  Premium header with logo, navigation, icons, and mobile menu support.
+{%- endcomment -%}
+
+{%- liquid
+  assign logo_position = settings.logo_position | default: 'center'
+  assign menu_style = settings.menu_style | default: 'horizontal'
+  assign enable_sticky = settings.enable_sticky_header
+  assign sticky_style = settings.sticky_header_style | default: 'on_scroll_up'
+  assign transparent = settings.enable_transparent_header
+  assign header_padding = settings.header_padding | default: 'standard'
+-%}
+
+<header
+  class="site-header{% if enable_sticky %} site-header--sticky{% endif %}{% if transparent %} site-header--transparent{% endif %}"
+  data-header
+  data-sticky-style="{{ sticky_style }}"
+  role="banner"
+  aria-label="{{ 'general.accessibility.header' | t }}"
+>
+  <div class="site-header__inner page-width">
+    {%- comment -%} Mobile menu toggle {%- endcomment -%}
+    <button
+      type="button"
+      class="site-header__menu-toggle"
+      data-mobile-nav-toggle
+      aria-expanded="false"
+      aria-controls="MobileNavDrawer"
+      aria-label="{{ 'general.accessibility.menu' | t }}"
+    >
+      {%- render 'icon-menu' -%}
+    </button>
+
+    {%- comment -%} Logo {%- endcomment -%}
+    <div class="site-header__logo">
+      <a href="{{ routes.root_url }}" class="site-header__logo-link" aria-label="{{ shop.name }}">
+        {%- if settings.logo != blank -%}
+          <img
+            src="{{ settings.logo | image_url: width: 300 }}"
+            alt="{{ shop.name | escape }}"
+            width="{{ settings.logo_width }}"
+            height="{{ settings.logo_width | divided_by: settings.logo.aspect_ratio | round }}"
+            class="site-header__logo-img"
+            loading="eager"
+          >
+        {%- else -%}
+          <span class="site-header__logo-text site-header__logo-text--{{ logo_position }}">
+            {{ shop.name }}
+          </span>
+        {%- endif -%}
+      </a>
+    </div>
+
+    {%- comment -%} Desktop navigation {%- endcomment -%}
+    {%- if menu_style == 'horizontal' -%}
+      <nav class="site-header__nav" aria-label="{{ 'general.accessibility.main_nav' | t }}">
+        <ul class="site-header__nav-list" role="list">
+          {%- for link in linklists.main-menu.links -%}
+            <li class="site-header__nav-item{% if link.links != blank %} site-header__nav-item--has-dropdown{% endif %}">
+              <a href="{{ link.url }}" class="site-header__nav-link"{% if link.active %} aria-current="page"{% endif %}>
+                {{ link.title | escape }}
+              </a>
+              {%- if link.links != blank -%}
+                <ul class="site-header__dropdown" role="list">
+                  {%- for child_link in link.links -%}
+                    <li class="site-header__dropdown-item">
+                      <a href="{{ child_link.url }}" class="site-header__dropdown-link"{% if child_link.active %} aria-current="page"{% endif %}>
+                        {{ child_link.title | escape }}
+                      </a>
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+      </nav>
+    {%- endif -%}
+
+    {%- comment -%} Header icons {%- endcomment -%}
+    <div class="site-header__icons">
+      {%- if settings.show_search -%}
+        <button
+          type="button"
+          class="site-header__icon site-header__icon--search"
+          data-search-toggle
+          aria-label="{{ 'general.search.search' | t }}"
+          aria-expanded="false"
+          aria-controls="SearchOverlay"
+        >
+          {%- render 'icon-search' -%}
+        </button>
+      {%- endif -%}
+
+      {%- if settings.show_account_icon -%}
+        <a href="{{ routes.account_url }}" class="site-header__icon site-header__icon--account" aria-label="{{ 'customer.account.title' | t }}">
+          {%- render 'icon-account' -%}
+        </a>
+      {%- endif -%}
+
+      <button
+        type="button"
+        class="site-header__icon site-header__icon--cart"
+        data-cart-toggle
+        aria-label="{{ 'cart.general.title' | t }}"
+        {% if settings.cart_type == 'drawer' %}
+          aria-expanded="false"
+          aria-controls="CartDrawer"
+        {% endif %}
+      >
+        {%- render 'icon-cart' -%}
+        <span class="site-header__cart-count" data-cart-count aria-hidden="true">{{ cart.item_count }}</span>
+        <span class="visually-hidden">{{ 'cart.general.item_count' | t: count: cart.item_count }}</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+{% schema %}
+{
+  "name": "t:sections.header.name",
+  "class": "section-header",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "main_menu",
+      "label": "t:sections.header.settings.main_menu.label",
+      "default": "main-menu"
+    },
+    {
+      "type": "link_list",
+      "id": "secondary_menu",
+      "label": "t:sections.header.settings.secondary_menu.label"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_social_icons",
+      "label": "t:sections.header.settings.show_social_icons.label",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

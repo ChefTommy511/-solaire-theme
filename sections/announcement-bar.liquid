@@ -1,0 +1,74 @@
+{%- comment -%}
+  Solaire Theme — Announcement Bar Section
+  Top-of-page banner for promotions, shipping info, or announcements.
+{%- endcomment -%}
+
+{%- if section.settings.enabled and section.settings.message != blank -%}
+  <aside
+    class="announcement-bar"
+    data-section-id="{{ section.id }}"
+    role="region"
+    aria-label="{{ 'sections.announcement_bar.label' | t }}"
+  >
+    <div class="announcement-bar__inner page-width">
+      <p class="announcement-bar__message">
+        {{ section.settings.message | escape }}
+      </p>
+      {%- if section.settings.show_close -%}
+        <button
+          type="button"
+          class="announcement-bar__close"
+          data-announcement-close
+          aria-label="{{ 'general.accessibility.close' | t }}"
+        >
+          {%- render 'icon-close' -%}
+        </button>
+      {%- endif -%}
+    </div>
+  </aside>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.announcement-bar.name",
+  "class": "section-announcement-bar",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enabled",
+      "label": "t:sections.announcement-bar.settings.enabled.label",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "message",
+      "label": "t:sections.announcement-bar.settings.message.label",
+      "default": "Free shipping on orders over {{ settings.cart_free_shipping_threshold | money }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_close",
+      "label": "t:sections.announcement-bar.settings.show_close.label",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "t:sections.announcement-bar.settings.bg_color.label",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "t:sections.announcement-bar.settings.text_color.label",
+      "default": "#faf8f5"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.announcement-bar.presets.name",
+      "category": "Header"
+    }
+  ]
+}
+{% endschema %}

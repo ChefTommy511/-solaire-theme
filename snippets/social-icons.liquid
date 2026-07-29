@@ -1,0 +1,28 @@
+{%- comment -%}
+  Solaire Theme — Social Icons Snippet
+  Renders social media links based on theme settings.
+{%- endcomment -%}
+
+{%- liquid
+  assign platforms = 'instagram,facebook,pinterest,tiktok,youtube,twitter,snapchat,vimeo' | split: ','
+-%}
+
+<ul class="social-icons" role="list">
+  {%- for platform in platforms -%}
+    {%- assign setting_key = 'social_' | append: platform | append: '_url' -%}
+    {%- assign url = settings[setting_key] -%}
+    {%- if url != blank -%}
+      <li class="social-icons__item">
+        <a
+          href="{{ url }}"
+          class="social-icons__link"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="{{ 'general.social.platform_label' | t: platform: platform | capitalize }}"
+        >
+          {%- render 'icon-' | append: platform -%}
+        </a>
+      </li>
+    {%- endif -%}
+  {%- endfor -%}
+</ul>

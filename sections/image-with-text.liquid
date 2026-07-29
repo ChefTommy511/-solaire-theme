@@ -1,0 +1,113 @@
+{%- comment -%}
+  Solaire Theme — Image with Text Section
+  Side-by-side image and text block for brand storytelling.
+{%- endcomment -%}
+
+{%- liquid
+  assign layout = section.settings.layout | default: 'image_left'
+  assign image = section.settings.image
+-%}
+
+<section class="image-with-text section-spacing" data-section-id="{{ section.id }}">
+  <div class="page-width">
+    <div class="image-with-text__wrapper image-with-text__wrapper--{{ layout }}">
+      <div class="image-with-text__media">
+        {%- if image != blank -%}
+          {%- render 'lazy-image',
+            image: image,
+            sizes: '(min-width: 768px) 50vw, 100vw',
+            class: 'image-with-text__image'
+          -%}
+        {%- else -%}
+          <div class="image-with-text__placeholder">
+            {{ 'image' | placeholder_svg_tag: 'image-with-text__placeholder-svg' }}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <div class="image-with-text__content">
+        {%- if section.settings.heading != blank -%}
+          <h2 class="image-with-text__heading">{{ section.settings.heading | escape }}</h2>
+        {%- endif -%}
+
+        {%- if section.settings.text != blank -%}
+          <div class="image-with-text__text rte">
+            {{ section.settings.text }}
+          </div>
+        {%- endif -%}
+
+        {%- if section.settings.button_text != blank -%}
+          <a
+            href="{{ section.settings.button_link | default: '#' }}"
+            class="btn btn--{{ section.settings.button_style }}"
+          >
+            {{ section.settings.button_text | escape }}
+          </a>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "t:sections.image-with-text.name",
+  "class": "section-image-with-text",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:sections.image-with-text.settings.image.label"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:sections.image-with-text.settings.layout.label",
+      "options": [
+        { "value": "image_left", "label": "t:sections.image-with-text.settings.layout.options.image_left" },
+        { "value": "image_right", "label": "t:sections.image-with-text.settings.layout.options.image_right" }
+      ],
+      "default": "image_left"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:sections.image-with-text.settings.heading.label",
+      "default": "Our story"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:sections.image-with-text.settings.text.label",
+      "default": "<p>Every pair is crafted with purpose — designed for those who demand clarity, quality, and uncompromising style.</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "t:sections.image-with-text.settings.button_text.label"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "t:sections.image-with-text.settings.button_link.label"
+    },
+    {
+      "type": "select",
+      "id": "button_style",
+      "label": "t:sections.image-with-text.settings.button_style.label",
+      "options": [
+        { "value": "primary", "label": "t:sections.image-with-text.settings.button_style.options.primary" },
+        { "value": "accent", "label": "t:sections.image-with-text.settings.button_style.options.accent" },
+        { "value": "outline", "label": "t:sections.image-with-text.settings.button_style.options.outline" }
+      ],
+      "default": "primary"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.image-with-text.presets.name",
+      "category": "Content"
+    }
+  ]
+}
+{% endschema %}

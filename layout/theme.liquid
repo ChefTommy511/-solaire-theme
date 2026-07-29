@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="{{ request.locale.iso_code }}" class="no-js">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
+    <meta name="theme-color" content="{{ settings.color_bg_dark }}">
+    <meta name="description" content="{{ page_description | default: shop.description | default: shop.name | escape }}">
+
+    <link rel="canonical" href="{{ canonical_url }}">
+    <link rel="preconnect" href="https://cdn.shopify.com" crossorigin>
+
+    {%- if settings.favicon != blank -%}
+      <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
+      <link rel="apple-touch-icon" href="{{ settings.favicon | image_url: width: 180, height: 180 }}">
+    {%- endif -%}
+
+    <title>
+      {%- if template.name == 'index' -%}
+        {{ shop.name }} — {{ 'general.meta.homepage_title' | t }}
+      {%- elsif template.name == 'product' -%}
+        {{ product.title | strip_html | escape }} — {{ shop.name }}
+      {%- elsif template.name == 'collection' -%}
+        {{ collection.title | strip_html | escape }} — {{ shop.name }}
+      {%- elsif page_title -%}
+        {{ page_title | escape }} — {{ shop.name }}
+      {%- else -%}
+        {{ shop.name }}
+      {%- endif -%}
+    </title>
+
+    {%- if page_description -%}
+      <meta name="description" content="{{ page_description | escape }}">
+    {%- endif -%}
+
+    {%- liquid
+      assign body_font = settings.font_body
+      assign heading_font = settings.font_heading
+    -%}
+
+    {%- style -%}
+      :root {
+        --color-bg-primary: {{ settings.color_bg_primary }};
+        --color-bg-secondary: {{ settings.color_bg_secondary }};
+        --color-bg-dark: {{ settings.color_bg_dark }};
+        --color-bg-rich-black: {{ settings.color_bg_rich_black }};
+        --color-text-primary: {{ settings.color_text_primary }};
+        --color-text-secondary: {{ settings.color_text_secondary }};
+        --color-text-light: {{ settings.color_text_light }};
+        --color-accent: {{ settings.color_accent }};
+        --color-accent-hover: {{ settings.color_accent_hover }};
+        --color-button-bg: {{ settings.color_button_bg }};
+        --color-button-text: {{ settings.color_button_text }};
+        --color-button-accent-bg: {{ settings.color_button_accent_bg }};
+        --color-button-accent-text: {{ settings.color_button_accent_text }};
+        --color-border: {{ settings.color_border }};
+        --color-error: {{ settings.color_error }};
+        --color-success: {{ settings.color_success }};
+        --color-sale-badge: {{ settings.color_sale_badge }};
+        --color-sold-out-badge: {{ settings.color_sold_out_badge }};
+        --font-size-base: {{ settings.font_size_base }}px;
+        --font-scale-ratio: {{ settings.font_scale_ratio }};
+        --font-weight-heading: {{ settings.font_weight_heading }};
+        --font-weight-body: {{ settings.font_weight_body }};
+        --letter-spacing-heading: {{ settings.letter_spacing_heading }}em;
+        --letter-spacing-body: {{ settings.letter_spacing_body }}em;
+        --logo-width: {{ settings.logo_width }}px;
+        --header-padding: var(--spacing-{{ settings.header_padding }});
+        --page-width: 1440px;
+        --page-gutter: 2rem;
+        --section-spacing: 6rem;
+
+        --spacing-compact: 0.8rem;
+        --spacing-standard: 1.2rem;
+        --spacing-spacious: 2rem;
+
+        --font-heading-stack: {% case heading_font %}
+          {% when 'playfair' %} 'Playfair Display', 'Times New Roman', serif
+          {% when 'cormorant' %} 'Cormorant Garamond', 'Times New Roman', serif
+          {% when 'bodoni' %} 'Bodoni Moda', 'Times New Roman', serif
+          {% when 'tenor_sans' %} 'Tenor Sans', 'Helvetica Neue', sans-serif
+          {% when 'system_serif' %} Georgia, 'Times New Roman', serif
+          {% else %} 'Playfair Display', 'Times New Roman', serif
+        {% endcase %};
+
+        --font-body-stack: {% case body_font %}
+          {% when 'inter' %} 'Inter', -apple-system, BlinkMacSystemFont, sans-serif
+          {% when 'lato' %} 'Lato', -apple-system, BlinkMacSystemFont, sans-serif
+          {% when 'work_sans' %} 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif
+          {% when 'system_sans' %} -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
+          {% else %} 'Inter', -apple-system, BlinkMacSystemFont, sans-serif
+        {% endcase %};
+      }
+    {%- endstyle -%}
+
+    {{ 'theme.css' | asset_url | stylesheet_tag }}
+
+    {%- if template.name == 'product' -%}
+      {{ 'component-product.css' | asset_url | stylesheet_tag: preload: true }}
+    {%- endif -%}
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "{{ shop.name | escape }}",
+        "url": "{{ shop.url }}",
+        "description": "{{ shop.description | default: shop.name | escape }}",
+        "logo": "{% if settings.logo %}{{ settings.logo | image_url: width: 500 }}{% endif %}",
+        "sameAs": [
+          "{{ settings.social_instagram_url }}",
+          "{{ settings.social_facebook_url }}",
+          "{{ settings.social_pinterest_url }}",
+          "{{ settings.social_tiktok_url }}",
+          "{{ settings.social_youtube_url }}",
+          "{{ settings.social_twitter_url }}"
+        ]
+      }
+    </script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "{{ shop.name | escape }}",
+        "url": "{{ shop.url }}",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "{{ shop.url }}/search?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+
+    <script>
+      document.documentElement.className = document.documentElement.className.replace('no-js', 'js');
+    </script>
+
+    {{ content_for_header }}
+  </head>
+
+  <body class="template-{{ template.name | handle }} template-{{ template.suffix | handle }}{% if template.suffix != blank %} template-{{ template.name }}-{{ template.suffix | handle }}{% endif %}">
+
+    {%- section 'announcement-bar' -%}
+    {%- section 'header' -%}
+
+    <main id="MainContent" class="main-content" role="main" tabindex="-1">
+      {{ content_for_layout }}
+    </main>
+
+    {%- section 'footer' -%}
+
+    {%- if settings.cart_type == 'drawer' -%}
+      <div id="CartDrawer" class="cart-drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-label="{{ 'cart.general.title' | t }}">
+        <div class="cart-drawer__overlay" data-cart-close></div>
+        <div class="cart-drawer__inner">
+          <div class="cart-drawer__header">
+            <h2 class="cart-drawer__title">{{ 'cart.general.title' | t }}</h2>
+            <button type="button" class="cart-drawer__close" data-cart-close aria-label="{{ 'general.accessibility.close' | t }}">
+              {%- render 'icon-close' -%}
+            </button>
+          </div>
+          <div class="cart-drawer__content" data-cart-items>
+            {%- render 'cart-items' -%}
+          </div>
+        </div>
+      </div>
+    {%- endif -%}
+
+    <!-- Mobile nav drawer -->
+    <div id="MobileNavDrawer" class="mobile-nav-drawer" aria-hidden="true">
+      <div class="mobile-nav-drawer__overlay" data-mobile-nav-close></div>
+      <nav class="mobile-nav-drawer__inner" aria-label="{{ 'general.accessibility.main_nav' | t }}">
+        <div class="mobile-nav-drawer__header">
+          <button type="button" class="mobile-nav-drawer__close" data-mobile-nav-close aria-label="{{ 'general.accessibility.close' | t }}">
+            {%- render 'icon-close' -%}
+          </button>
+        </div>
+        <div class="mobile-nav-drawer__content">
+          <!-- Will be populated by JS fetching nav markup or rendered server-side -->
+        </div>
+      </nav>
+    </div>
+
+    <!-- Search overlay -->
+    <div id="SearchOverlay" class="search-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="{{ 'general.search.search' | t }}">
+      <div class="search-overlay__inner">
+        <button type="button" class="search-overlay__close" data-search-close aria-label="{{ 'general.accessibility.close' | t }}">
+          {%- render 'icon-close' -%}
+        </button>
+        <form action="{{ routes.search_url }}" method="get" role="search" class="search-overlay__form">
+          <input
+            type="search"
+            name="q"
+            class="search-overlay__input"
+            placeholder="{{ 'general.search.placeholder' | t }}"
+            aria-label="{{ 'general.search.search' | t }}"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+          >
+          <button type="submit" class="search-overlay__submit" aria-label="{{ 'general.search.submit' | t }}">
+            {%- render 'icon-search' -%}
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <script src="{{ 'theme.js' | asset_url }}" defer></script>
+
+    {%- if settings.cart_type == 'drawer' -%}
+      <script>
+        window.SOLAIRE = window.SOLAIRE || {};
+        window.SOLAIRE.cartType = 'drawer';
+        window.SOLAIRE.freeShippingThreshold = {{ settings.cart_free_shipping_threshold | default: 0 }};
+      </script>
+    {%- endif -%}
+  </body>
+</html>
