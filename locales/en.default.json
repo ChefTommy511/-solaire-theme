@@ -705,6 +705,7 @@
   },
   "settings_schema": {
     "colors": {
+      "name": "Colors",
       "header": "Colors",
       "bg_primary": {
         "label": "Primary background"
@@ -762,6 +763,7 @@
       }
     },
     "typography": {
+      "name": "Typography",
       "header": "Typography",
       "heading_font": {
         "label": "Heading font",
@@ -803,6 +805,7 @@
       }
     },
     "header": {
+      "name": "Header",
       "header": "Header",
       "logo": {
         "label": "Logo image"
@@ -854,6 +857,7 @@
       }
     },
     "footer": {
+      "name": "Footer",
       "header": "Footer",
       "show_social": {
         "label": "Show social media icons"
@@ -890,6 +894,7 @@
       }
     },
     "product": {
+      "name": "Product page",
       "header": "Product page",
       "image_zoom": {
         "label": "Enable image zoom"
@@ -954,6 +959,7 @@
       }
     },
     "cart": {
+      "name": "Cart",
       "header": "Cart",
       "cart_type": {
         "label": "Cart type",
@@ -970,13 +976,14 @@
       },
       "free_shipping": {
         "label": "Free shipping threshold",
-        "info": "Display a free shipping progress bar. Leave blank to disable."
+        "info": "Amount in cents (e.g., 10000 = $100.00). Display a free shipping progress bar. Set to 0 to disable."
       },
       "free_shipping_msg": {
         "label": "Free shipping message"
       }
     },
     "social": {
+      "name": "Social media",
       "header": "Social media",
       "url_info": "Full URL including https://",
       "instagram": {
@@ -1005,10 +1012,27 @@
       }
     },
     "favicon": {
+      "name": "Favicon",
       "header": "Favicon",
       "image": {
         "label": "Favicon image",
         "info": "Square image, at least 32x32px. Will be resized automatically."
+      }
+    },
+    "social_image": {
+      "name": "Social sharing",
+      "header": "Social sharing image",
+      "image": {
+        "label": "Social sharing image",
+        "info": "Default image used when your store is shared on social media. Recommended size: 1200x630px."
+      }
+    },
+    "custom_css": {
+      "name": "Custom CSS",
+      "header": "Custom CSS",
+      "code": {
+        "label": "Custom CSS",
+        "info": "Add custom CSS to customize your theme. This will be applied globally."
       }
     }
   }

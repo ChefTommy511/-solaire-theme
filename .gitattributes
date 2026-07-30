@@ -1,0 +1,13 @@
+# Normalize line endings for all text files
+* text=auto
+
+# Mark SVG files as binary to prevent line-ending normalization
+*.svg binary
+
+# Shopify theme files should use LF line endings
+*.liquid text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.md text eol=lf
+*.html text eol=lf
