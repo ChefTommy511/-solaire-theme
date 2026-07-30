@@ -178,3 +178,9 @@ See `/screenshots/README.md` for detailed screenshot requirements.
 - Items marked ⚠️ require verification that the corresponding section `.liquid` file exists. If sections were removed during a polish pass, the template JSON files should be updated to reference only existing sections.
 - Browser testing and Shopify CLI checks should be performed on the final submission build.
 - Screenshots should be taken on a development store with real-looking demo products (not placeholder images).
+
+---
+
+## Restoration Verification (2026-07-30)
+
+ **Confirmed:** All three documentation files (`docs/SUBMISSION_CHECKLIST.md`, `docs/STYLE_GUIDE.md`, `screenshots/README.md`) are present in the repository at HEAD (commit 1048073). They were created in PR #8 (commit 4b50d2e) and were **not** deleted by commit 1048073 ("Update from Shopify for theme"), which only modified `config/settings_data.json` and `config/settings_schema.json`. Content verified to match originals via `git show` diff.
