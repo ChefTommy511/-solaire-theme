@@ -189,6 +189,7 @@
         {%- unless product.has_only_default_variant -%}
           <div class="main-product__variants" data-variants>
             {%- for option in product.options_with_values -%}
+              {%- assign opt_index = option.position | minus: 1 -%}
               {%- liquid
                 assign option_name_handle = option.name | handle
                 assign is_color = false
@@ -211,7 +212,7 @@
                     product: product,
                     context: 'page',
                     option_name: option.name,
-                    current_value: current_variant.options[option.position | minus: 1]
+                    current_value: current_variant.options[opt_index]
                   -%}
                 </div>
               {%- else -%}
@@ -238,7 +239,7 @@
                       -%}
                       <option
                         value="{{ value | escape }}"
-                        {% if value == current_variant.options[option.position | minus: 1] %}selected{% endif %}
+                        {% if value == current_variant.options[opt_index] %}selected{% endif %}
                         {% unless available %}disabled{% endunless %}
                       >
                         {{ value | escape }}{% unless available %} — {{ 'products.product.unavailable' | t }}{% endunless %}
