@@ -6,10 +6,9 @@
 
 {%- liquid
   assign product = product | default: nil
-  if product == nil
-    return
-  endif
-
+-%}
+{%- if product != nil -%}
+{%- liquid
   assign context = context | default: 'collection'
   assign image_ratio = image_ratio | default: '4-5'
   assign show_secondary_image = show_secondary_image | default: false
@@ -31,6 +30,9 @@
   endif
 
   assign ratio_class = 'product-card__image--' | append: image_ratio
+
+  assign product_title_escaped = product.title | escape
+  assign secondary_image_alt = product.title | append: ' — ' | append: 'collections.general.secondary_image' | t | escape
 -%}
 
 <article
@@ -44,12 +46,12 @@
     <a
       href="{{ product.url }}"
       class="product-card__image-link {{ ratio_class }}"
-      aria-label="{{ product.title | escape }}"
+      aria-label="{{ product_title_escaped }}"
     >
       {%- if featured_image != blank -%}
         {%- render 'lazy-image',
           image: featured_image,
-          alt: product.title | escape,
+          alt: product_title_escaped,
           class: 'product-card__image product-card__image--primary',
           sizes: '(min-width: 1440px) 360px, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
           widths: '180, 360, 540, 720, 900, 1080'
@@ -63,7 +65,7 @@
       {%- if has_secondary -%}
         {%- render 'lazy-image',
           image: secondary_image,
-          alt: product.title | append: ' — ' | append: 'collections.general.secondary_image' | t | escape,
+          alt: secondary_image_alt,
           class: 'product-card__image product-card__image--secondary',
           sizes: '(min-width: 1440px) 360px, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw',
           widths: '180, 360, 540, 720, 900, 1080'
@@ -92,7 +94,7 @@
           type="button"
           class="product-card__quick-add-btn"
           data-quick-add="{{ variant.id }}"
-          aria-label="{{ 'products.product.add_to_cart' | t }} — {{ product.title | escape }}"
+          aria-label="{{ 'products.product.add_to_cart' | t }} — {{ product_title_escaped }}"
         >
           {%- render 'icon-cart' -%}
           <span class="visually-hidden">{{ 'products.product.add_to_cart' | t }}</span>
@@ -109,7 +111,7 @@
 
     <h3 class="product-card__title">
       <a href="{{ product.url }}" class="product-card__title-link">
-        {{- product.title | escape -}}
+        {{- product_title_escaped -}}
       </a>
     </h3>
 
@@ -139,7 +141,7 @@
             href="{{ product.url }}"
             class="btn btn--accent btn--small"
             {% unless product.has_only_default_variant %}
-              aria-label="{{ 'products.product.select_options' | t }} — {{ product.title | escape }}"
+              aria-label="{{ 'products.product.select_options' | t }} — {{ product_title_escaped }}"
             {% endunless %}
           >
             {%- if product.has_only_default_variant -%}
@@ -157,3 +159,4 @@
     </div>
   </div>
 </article>
+{%- endif -%}

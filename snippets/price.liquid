@@ -5,10 +5,9 @@
 
 {%- liquid
   assign product = product | default: nil
-  if product == nil
-    return
-  endif
-
+-%}
+{%- if product != nil -%}
+{%- liquid
   assign target = product.selected_or_first_available_variant
   assign compare_at_price = target.compare_at_price
   assign price = target.price
@@ -59,3 +58,4 @@
     </span>
   {%- endif -%}
 </span>
+{%- endif -%}
