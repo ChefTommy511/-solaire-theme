@@ -1,0 +1,220 @@
+{%- comment -%}
+  Solaire Theme — Main Search Section
+  Search results page with product grid, pages/articles, empty state, suggestions.
+{%- endcomment -%}
+
+{%- liquid
+  assign results_per_page = section.settings.results_per_page | default: 12
+  assign columns_desktop = section.settings.columns_desktop | default: 4
+  assign columns_mobile = section.settings.columns_mobile | default: 2
+  assign show_suggestions = section.settings.show_suggestions | default: true
+  assign search_terms = search.terms | escape
+  assign has_results = search.results.size > 0
+-%}
+
+{%- style -%}
+  .main-search__grid {
+    --columns-desktop: {{ columns_desktop }};
+    --columns-mobile: {{ columns_mobile }};
+  }
+{%- endstyle -%}
+
+<div class="main-search page-width">
+  <div class="main-search__header">
+    <h1 class="main-search__title">
+      {%- if search_terms != blank -%}
+        {{ 'sections.main-search.results_for' | t: terms: search_terms }}
+      {%- else -%}
+        {{ 'sections.main-search.title' | t }}
+      {%- endif -%}
+    </h1>
+
+    <form action="{{ routes.search_url }}" method="get" role="search" class="main-search__form">
+      <div class="main-search__input-wrapper">
+        <input
+          type="search"
+          name="q"
+          class="main-search__input"
+          value="{{ search_terms }}"
+          placeholder="{{ 'general.search.placeholder' | t }}"
+          aria-label="{{ 'general.search.search' | t }}"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+        >
+        <button type="submit" class="main-search__submit" aria-label="{{ 'general.search.submit' | t }}">
+          {%- render 'icon-search' -%}
+        </button>
+      </div>
+      {%- if search_terms != blank and has_results -%}
+        <p class="main-search__count">
+          {{ 'sections.main-search.results_count' | t: count: search.results_count }}
+        </p>
+      {%- endif -%}
+    </form>
+  </div>
+
+  {%- if search_terms == blank -%}
+    {%- comment -%} Initial state — before search {%- endcomment -%}
+    <div class="main-search__initial">
+      <div class="main-search__empty-icon">
+        {%- render 'icon-search' -%}
+      </div>
+      <h2 class="main-search__empty-title">{{ 'sections.main-search.initial_title' | t }}</h2>
+      <p class="main-search__empty-subtext">{{ 'sections.main-search.initial_subtext' | t }}</p>
+
+      {%- if show_suggestions and section.blocks.size > 0 -%}
+        <div class="main-search__suggestions">
+          <h3 class="main-search__suggestions-title">{{ 'sections.main-search.suggestions_title' | t }}</h3>
+          <ul class="main-search__suggestions-list" role="list">
+            {%- for block in section.blocks -%}
+              {%- if block.type == 'suggestion' and block.settings.text != blank -%}
+                <li>
+                  <a href="{{ routes.search_url }}?q={{ block.settings.text | url_encode }}" class="main-search__suggestion-link">
+                    {{ block.settings.text | escape }}
+                  </a>
+                </li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+        </div>
+      {%- endif -%}
+    </div>
+
+  {%- elsif has_results -%}
+    {%- comment -%} Results grid {%- endcomment -%}
+    <div class="main-search__grid">
+      {%- for item in search.results -%}
+        {%- case item.object_type -%}
+          {%- when 'product' -%}
+            {%- render 'product-card', product: item, show_secondary_image: false, show_quick_add: false -%}
+          {%- when 'article' -%}
+            <article class="search-article">
+              <a href="{{ item.url }}" class="search-article__link">
+                {%- if item.image -%}
+                  <div class="search-article__image">
+                    <img
+                      src="{{ item.image | image_url: width: 400 }}"
+                      alt="{{ item.title | escape }}"
+                      width="400"
+                      height="300"
+                      loading="lazy"
+                    >
+                  </div>
+                {%- endif -%}
+                <div class="search-article__content">
+                  <span class="search-article__type">{{ 'sections.main-search.article_label' | t }}</span>
+                  <h3 class="search-article__title">{{ item.title | escape }}</h3>
+                  {%- if item.excerpt != blank -%}
+                    <p class="search-article__excerpt">{{ item.excerpt | strip_html | truncatewords: 20 }}</p>
+                  {%- endif -%}
+                </div>
+              </a>
+            </article>
+          {%- when 'page' -%}
+            <article class="search-article">
+              <a href="{{ item.url }}" class="search-article__link">
+                <div class="search-article__content">
+                  <span class="search-article__type">{{ 'sections.main-search.page_label' | t }}</span>
+                  <h3 class="search-article__title">{{ item.title | escape }}</h3>
+                </div>
+              </a>
+            </article>
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+
+  {%- else -%}
+    {%- comment -%} Empty state {%- endcomment -%}
+    <div class="main-search__empty">
+      <div class="main-search__empty-icon">
+        {%- render 'icon-search' -%}
+      </div>
+      <h2 class="main-search__empty-title">{{ 'sections.main-search.no_results_title' | t: terms: search_terms }}</h2>
+      <p class="main-search__empty-subtext">{{ 'sections.main-search.no_results_subtext' | t }}</p>
+      <div class="main-search__empty-actions">
+        <a href="{{ routes.all_products_collection_url }}" class="btn btn--accent">
+          {{ 'sections.main-search.shop_all' | t }}
+        </a>
+        <a href="{{ routes.root_url }}" class="btn btn--outline">
+          {{ 'sections.main-search.back_home' | t }}
+        </a>
+      </div>
+    </div>
+  {%- endif -%}
+
+  {%- if has_results and search.pages > 1 -%}
+    {%- render 'pagination', paginate: search -%}
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "t:sections.main-search.name",
+  "class": "section-main-search",
+  "settings": [
+    {
+      "type": "range",
+      "id": "results_per_page",
+      "label": "t:sections.main-search.settings.results_per_page.label",
+      "min": 4,
+      "max": 48,
+      "step": 4,
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "label": "t:sections.main-search.settings.columns_desktop.label",
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "columns_mobile",
+      "label": "t:sections.main-search.settings.columns_mobile.label",
+      "min": 1,
+      "max": 3,
+      "step": 1,
+      "default": 2
+    },
+    {
+      "type": "checkbox",
+      "id": "show_suggestions",
+      "label": "t:sections.main-search.settings.show_suggestions.label",
+      "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "type": "suggestion",
+      "name": "t:sections.main-search.blocks.suggestion.name",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "t:sections.main-search.blocks.suggestion.settings.text.label",
+          "default": "Sunglasses"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.main-search.presets.name",
+      "category": "Search",
+      "blocks": [
+        { "type": "suggestion", "settings": { "text": "Sunglasses" } },
+        { "type": "suggestion", "settings": { "text": "Aviator" } },
+        { "type": "suggestion", "settings": { "text": "Cat Eye" } },
+        { "type": "suggestion", "settings": { "text": "Round Frames" } },
+        { "type": "suggestion", "settings": { "text": "Polarized" } },
+        { "type": "suggestion", "settings": { "text": "New Arrivals" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,5 +1,10 @@
 {
   "general": {
+    "404": {
+      "title": "Page not found",
+      "subtext": "The page you're looking for doesn't exist or has been moved.",
+      "button": "Back to homepage"
+    },
     "meta": {
       "homepage_title": "Premium Eyewear"
     },
@@ -36,11 +41,6 @@
       "next": "Next",
       "page": "Page {{ page }}"
     },
-    "404": {
-      "title": "Page not found",
-      "subtext": "The page you're looking for doesn't exist or has been moved.",
-      "button": "Back to homepage"
-    },
     "password": {
       "title": "Opening soon",
       "subtext": "We're working on something special. Enter your password to preview.",
@@ -54,12 +54,49 @@
   "sections": {
     "header": {
       "name": "Header",
+      "presets": {
+        "name": "Header"
+      },
+      "secondary_nav": "Secondary navigation",
+      "toggle_submenu": "Toggle submenu",
       "settings": {
+        "logo_image": {
+          "label": "Logo image"
+        },
+        "logo_width": {
+          "label": "Logo width"
+        },
+        "logo_position": {
+          "label": "Logo position",
+          "options": {
+            "left": "Left",
+            "center": "Center"
+          }
+        },
         "main_menu": {
           "label": "Main menu"
         },
         "secondary_menu": {
           "label": "Secondary menu"
+        },
+        "enable_sticky": {
+          "label": "Enable sticky header"
+        },
+        "sticky_style": {
+          "label": "Sticky behavior",
+          "options": {
+            "always": "Always visible",
+            "on_scroll_up": "Show on scroll up"
+          }
+        },
+        "show_search": {
+          "label": "Show search icon"
+        },
+        "show_cart": {
+          "label": "Show cart icon"
+        },
+        "show_account": {
+          "label": "Show account icon"
         },
         "show_social_icons": {
           "label": "Show social icons"
@@ -68,11 +105,58 @@
     },
     "footer": {
       "name": "Footer",
+      "presets": {
+        "name": "Footer"
+      },
+      "all_rights_reserved": "All rights reserved.",
       "settings": {
-        "footer_menu": {
-          "label": "Footer menu"
+        "brand_header": {
+          "content": "Brand"
         },
-        "show_payment_icons_override": {
+        "menus_header": {
+          "content": "Navigation menus"
+        },
+        "newsletter_header": {
+          "content": "Newsletter"
+        },
+        "style_header": {
+          "content": "Style"
+        },
+        "footer_logo": {
+          "label": "Footer logo"
+        },
+        "footer_logo_width": {
+          "label": "Logo width"
+        },
+        "about_text": {
+          "label": "About text"
+        },
+        "show_social": {
+          "label": "Show social media icons"
+        },
+        "quick_links_menu": {
+          "label": "Quick links menu"
+        },
+        "service_menu": {
+          "label": "Customer service menu"
+        },
+        "show_newsletter": {
+          "label": "Show newsletter signup"
+        },
+        "newsletter_heading": {
+          "label": "Newsletter heading"
+        },
+        "newsletter_subtext": {
+          "label": "Newsletter subtext"
+        },
+        "color_scheme": {
+          "label": "Color scheme",
+          "options": {
+            "dark": "Dark",
+            "light": "Light"
+          }
+        },
+        "show_payment_icons": {
           "label": "Show payment icons"
         }
       }
@@ -331,21 +415,38 @@
         "name": "Announcement Bar"
       },
       "label": "Announcement",
+      "go_to_message": "Go to message {{ number }}",
       "settings": {
         "enabled": {
           "label": "Show announcement"
         },
-        "message": {
-          "label": "Message"
+        "color_scheme": {
+          "label": "Color scheme",
+          "options": {
+            "dark": "Dark",
+            "light": "Light",
+            "gold": "Gold accent"
+          }
         },
-        "show_close": {
+        "autoplay_speed": {
+          "label": "Autoplay speed",
+          "info": "Time between message rotations when multiple messages exist."
+        },
+        "show_dismiss": {
           "label": "Show close button"
-        },
-        "bg_color": {
-          "label": "Background color"
-        },
-        "text_color": {
-          "label": "Text color"
+        }
+      },
+      "blocks": {
+        "message": {
+          "name": "Message",
+          "settings": {
+            "text": {
+              "label": "Message text"
+            },
+            "link": {
+              "label": "Link"
+            }
+          }
         }
       }
     },
@@ -364,6 +465,77 @@
         "recommendations_collection": {
           "label": "Recommendations collection",
           "info": "Products from this collection will be shown below the cart."
+        }
+      }
+    },
+    "main-search": {
+      "name": "Search page",
+      "presets": {
+        "name": "Search page"
+      },
+      "title": "Search our store",
+      "results_for": "Results for \"{{ terms }}\"",
+      "results_count": "{{ count }} results found",
+      "initial_title": "What are you looking for?",
+      "initial_subtext": "Enter a search term to find products, articles, and pages.",
+      "suggestions_title": "Popular searches",
+      "shop_all": "Shop all products",
+      "back_home": "Back to home",
+      "no_results_title": "No results for \"{{ terms }}\"",
+      "no_results_subtext": "Try adjusting your search terms or browse our collections.",
+      "article_label": "Article",
+      "page_label": "Page",
+      "settings": {
+        "results_per_page": {
+          "label": "Results per page"
+        },
+        "columns_desktop": {
+          "label": "Columns on desktop"
+        },
+        "columns_mobile": {
+          "label": "Columns on mobile"
+        },
+        "show_suggestions": {
+          "label": "Show search suggestions"
+        }
+      },
+      "blocks": {
+        "suggestion": {
+          "name": "Suggestion",
+          "settings": {
+            "text": {
+              "label": "Suggestion text"
+            }
+          }
+        }
+      }
+    },
+    "main-404": {
+      "name": "404 Page",
+      "presets": {
+        "name": "404 Page"
+      },
+      "view_home": "View all collections",
+      "featured_collections": "Featured collections",
+      "settings": {
+        "heading": {
+          "label": "Heading"
+        },
+        "subtext": {
+          "label": "Subtext"
+        },
+        "button_text": {
+          "label": "Button text"
+        },
+        "show_search": {
+          "label": "Show search bar"
+        },
+        "show_collections": {
+          "label": "Show featured collections"
+        },
+        "collections_list": {
+          "label": "Collections",
+          "info": "Select collections to display as suggestions."
         }
       }
     }
