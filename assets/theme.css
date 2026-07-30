@@ -4816,3 +4816,289 @@ body.drawer-open {
     display: none;
   }
 }
+
+/* ============================================
+   Quality Pass Additions
+   Skip-to-content, Back-to-top, Mobile fixes,
+   Accessibility & Performance enhancements
+   ============================================ */
+
+/* ---- Skip-to-content link ---- */
+.skip-to-content-link:focus-visible {
+  position: fixed;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  height: auto;
+  padding: 0.75rem 1.5rem;
+  clip: auto;
+  clip-path: none;
+  white-space: nowrap;
+  background-color: var(--color-accent, #c9a96e);
+  color: var(--color-bg-dark, #1a1a1a);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none;
+  z-index: 9999;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+/* ---- Back to top button ---- */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 1.5rem;
+  z-index: 50;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--color-accent, #c9a96e);
+  color: var(--color-bg-dark, #1a1a1a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  transition: opacity 0.35s ease, visibility 0.35s ease, transform 0.35s ease, background-color 0.3s ease;
+  border: none;
+  cursor: pointer;
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.back-to-top.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.back-to-top:hover {
+  background-color: var(--color-accent-hover, #b8934f);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 767px) {
+  .back-to-top {
+    bottom: 1.25rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* ---- Enhanced Focus Styles ---- */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+details summary:focus-visible {
+  outline: 2px solid var(--color-accent, #c9a96e);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+input[type="radio"]:focus-visible + .variant-swatches__swatch,
+input[type="checkbox"]:focus-visible + .main-collection__filter-checkmark {
+  outline: 2px solid var(--color-accent, #c9a96e);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+/* ---- Minimum tappable size (WCAG) ---- */
+.site-header__icon,
+.site-header__menu-toggle,
+.mobile-nav-drawer__close,
+.cart-drawer__close,
+.search-overlay__close,
+.hero-banner__arrow,
+.hero-banner__dot,
+.main-product__thumbnail,
+.main-product__dot,
+.product-card__quick-add-btn,
+.main-collection__filter-toggle,
+.main-collection__view-btn,
+.main-collection__filters-close {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.cart-item__qty-btn {
+  min-width: 36px;
+  min-height: 36px;
+}
+
+/* ---- Gold text contrast fix ---- */
+@media (max-width: 767px) {
+  .product-card__badge--sale {
+    color: var(--color-bg-dark, #1a1a1a);
+  }
+}
+
+/* ---- Cart Drawer full-width on mobile ---- */
+@media (max-width: 479px) {
+  .cart-drawer__inner {
+    width: 100vw;
+    max-width: none;
+  }
+  .cart-drawer__header {
+    padding: 1rem 1.25rem;
+  }
+  .cart-drawer__content {
+    padding: 1rem;
+  }
+  .cart-item__image {
+    width: 64px;
+    height: 64px;
+  }
+}
+
+/* ---- Hero banner mobile text overflow fix ---- */
+@media (max-width: 767px) {
+  .hero-banner__heading {
+    word-break: break-word;
+    hyphens: auto;
+  }
+  .hero-banner__subheading {
+    word-break: break-word;
+  }
+  .hero-banner__text {
+    padding: 1rem;
+    max-width: 100%;
+  }
+}
+
+/* ---- Product page mobile fixes ---- */
+@media (max-width: 767px) {
+  .main-product__details--sticky .main-product__details-inner {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+  .main-product__atc {
+    padding: 1rem 1.5rem;
+    min-height: 50px;
+  }
+  .main-product__quantity-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .main-product__quantity-input {
+    height: 44px;
+  }
+}
+
+/* ---- Collection page fixes ---- */
+@media (max-width: 767px) {
+  .main-collection__toolbar {
+    position: relative;
+    padding: 1rem 0;
+  }
+  .main-collection__toolbar-inner {
+    gap: 0.75rem;
+  }
+  .main-collection__toolbar-right {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .main-collection__sort {
+    flex: 1;
+    min-width: 0;
+  }
+  .main-collection__sort-select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* ---- Featured collection grid collapse ---- */
+@media (max-width: 479px) {
+  .featured-collection__grid {
+    gap: 0.75rem;
+  }
+  .product-card__title {
+    font-size: 0.8125rem;
+  }
+  .product-card__vendor {
+    font-size: 0.6875rem;
+  }
+}
+
+/* ---- Search & 404 full-width ---- */
+@media (max-width: 479px) {
+  .main-404__actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  .main-404__actions .btn {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+/* ---- Newsletter button tappable ---- */
+.newsletter-form__button {
+  min-height: 44px;
+}
+
+/* ---- Footer accordion mobile enhancements ---- */
+@media (max-width: 767px) {
+  .site-footer__nav-column-toggle {
+    min-height: 44px;
+    padding: 0.875rem 0;
+  }
+  .site-footer__nav-column-toggle .icon {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.3s ease;
+  }
+  .site-footer__nav-column--accordion[data-open="true"] .site-footer__nav-column-toggle .icon {
+    transform: rotate(180deg);
+  }
+}
+
+/* ---- Mobile nav tappability ---- */
+@media (max-width: 767px) {
+  .mobile-nav__link {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .mobile-nav__toggle {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ---- Swatches tappable ---- */
+.main-product__variants .variant-swatches__label {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (max-width: 767px) {
+  .main-product__variants .variant-swatches__swatch {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* ---- Cart quantity tappable ---- */
+@media (max-width: 479px) {
+  .cart-item__qty-btn {
+    min-width: 36px;
+    min-height: 36px;
+    width: 36px;
+    height: 36px;
+  }
+}
