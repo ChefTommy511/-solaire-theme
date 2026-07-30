@@ -1,0 +1,719 @@
+{%- comment -%}
+  Solaire Theme — Main Product Section
+  Premium, image-forward product layout for sunglasses/eyewear.
+  Desktop: 60% image gallery (left), 40% sticky details (right).
+  Mobile: full-width stacked — images above, details below.
+  Features: image zoom, variant swatches, size guide, product accordions.
+{%- endcomment -%}
+
+{%- liquid
+  assign product = product | default: nil
+  if product == nil
+    render 'missing-product'
+    return
+  endif
+
+  assign current_variant = product.selected_or_first_available_variant
+  assign featured_media = current_variant.featured_media | default: product.featured_media
+  assign product_media = product.media
+
+  assign show_vendor = section.settings.show_vendor
+  assign show_sku = section.settings.show_sku
+  assign show_size_guide = section.settings.show_size_guide
+  assign enable_zoom = section.settings.enable_zoom
+  assign enable_lightbox = section.settings.enable_lightbox
+  assign gallery_layout = section.settings.gallery_layout | default: 'thumbnails'
+  assign sticky_details = section.settings.sticky_details | default: true
+
+  assign form_id = 'product-form-' | append: section.id
+-%}
+
+<div
+  class="main-product"
+  id="MainProduct-{{ section.id }}"
+  data-section="{{ section.id }}"
+  data-product-id="{{ product.id }}"
+  data-sticky-details="{{ sticky_details }}"
+>
+  <div class="main-product__wrapper page-width">
+    {%- comment -%}
+      ============================================
+      LEFT COLUMN — Image Gallery (60% desktop)
+      ============================================
+    {%- endcomment -%}
+    <div class="main-product__gallery" data-gallery>
+      {%- if product_media.size > 0 -%}
+        {%- comment -%} Primary Image with Zoom {%- endcomment -%}
+        <div class="main-product__primary-media" data-primary-media>
+          {%- if enable_zoom -%}
+            {%- render 'image-zoom',
+              image: featured_media.preview_image,
+              zoom_id: 'ProductZoom-' | append: section.id,
+              zoom_enabled: enable_zoom
+            -%}
+          {%- else -%}
+            <div
+              class="main-product__featured-image-wrapper"
+              role="img"
+              aria-label="{{ featured_media.alt | default: product.title | escape }}"
+            >
+              {%- render 'lazy-image',
+                image: featured_media.preview_image,
+                sizes: '(min-width: 1024px) 60vw, 100vw',
+                class: 'main-product__featured-image',
+                alt: featured_media.alt | default: product.title | escape,
+                loading: 'eager',
+                fetchpriority: 'high'
+              -%}
+            </div>
+          {%- endif -%}
+
+          {%- if enable_lightbox -%}
+            <button
+              type="button"
+              class="main-product__lightbox-trigger"
+              aria-label="{{ 'products.product.open_lightbox' | t }}"
+              data-lightbox-trigger
+            >
+              {%- render 'icon-search' -%}
+            </button>
+          {%- endif -%}
+
+          {%- unless product.available -%}
+            <span class="main-product__badge main-product__badge--sold-out">
+              {{ 'products.product.sold_out' | t }}
+            </span>
+          {%- elsif product.compare_at_price > product.price -%}
+            <span class="main-product__badge main-product__badge--sale">
+              {{ 'products.product.on_sale' | t }}
+            </span>
+          {%- endunless -%}
+        </div>
+
+        {%- comment -%} Thumbnail Strip {%- endcomment -%}
+        {%- if product_media.size > 1 and gallery_layout == 'thumbnails' -%}
+          <div class="main-product__thumbnails" data-thumbnails>
+            <div class="main-product__thumbnails-track" data-thumbnails-track>
+              {%- for media in product_media -%}
+                <button
+                  type="button"
+                  class="main-product__thumbnail{% if media.id == featured_media.id %} main-product__thumbnail--active{% endif %}"
+                  data-thumbnail
+                  data-media-id="{{ media.id }}"
+                  data-media-type="{{ media.media_type }}"
+                  data-media-position="{{ forloop.index }}"
+                  aria-label="{{ 'products.product.media_alt' | t: product_title: product.title, media_position: forloop.index }}"
+                  {% if media.id == featured_media.id %}aria-current="true"{% endif %}
+                >
+                  <span class="main-product__thumbnail-image">
+                    {%- if media.media_type == 'video' or media.media_type == 'external_video' -%}
+                      <span class="main-product__thumbnail-play" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="2"/>
+                          <polygon points="9,7 9,17 18,12" fill="currentColor"/>
+                        </svg>
+                      </span>
+                    {%- endif -%}
+                    {%- render 'lazy-image',
+                      image: media.preview_image,
+                      sizes: '80px',
+                      class: 'main-product__thumbnail-img',
+                      alt: media.alt | default: product.title | append: ' - ' | append: forloop.index | escape
+                    -%}
+                  </span>
+                </button>
+              {%- endfor -%}
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Mobile Carousel Dots {%- endcomment -%}
+        {%- if product_media.size > 1 -%}
+          <div class="main-product__dots" data-mobile-dots>
+            {%- for media in product_media -%}
+              <button
+                type="button"
+                class="main-product__dot{% if media.id == featured_media.id %} main-product__dot--active{% endif %}"
+                data-dot
+                data-media-id="{{ media.id }}"
+                aria-label="{{ 'products.product.go_to_media' | t: number: forloop.index }}"
+                {% if media.id == featured_media.id %}aria-current="true"{% endif %}
+              ></button>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      {%- else -%}
+        <div class="main-product__placeholder">
+          {{ 'product-1' | placeholder_svg_tag: 'main-product__placeholder-svg' }}
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%}
+      ============================================
+      RIGHT COLUMN — Product Details (40% desktop)
+      ============================================
+    {%- endcomment -%}
+    <div class="main-product__details" data-product-details>
+      <div class="main-product__details-inner" data-sticky-inner>
+
+        {%- comment -%} Vendor {%- endcomment -%}
+        {%- if show_vendor and product.vendor != blank -%}
+          <p class="main-product__vendor" data-vendor>
+            {{ product.vendor | escape }}
+          </p>
+        {%- endif -%}
+
+        {%- comment -%} Title {%- endcomment -%}
+        <h1 class="main-product__title" data-title>
+          {{ product.title | escape }}
+        </h1>
+
+        {%- comment -%} Price {%- endcomment -%}
+        <div class="main-product__price" data-price>
+          {%- render 'price', product: product -%}
+        </div>
+
+        {%- comment -%} SKU {%- endcomment -%}
+        {%- if show_sku and current_variant.sku != blank -%}
+          <p class="main-product__sku" data-sku>
+            {{ 'products.product.sku' | t: sku: current_variant.sku }}
+          </p>
+        {%- endif -%}
+
+        {%- comment -%} Variant Swatches & Selectors {%- endcomment -%}
+        {%- unless product.has_only_default_variant -%}
+          <div class="main-product__variants" data-variants>
+            {%- for option in product.options_with_values -%}
+              {%- liquid
+                assign option_name_handle = option.name | handle
+                assign is_color = false
+                if option_name_handle contains 'color' or option_name_handle contains 'colour' or option_name_handle contains 'frame'
+                  assign is_color = true
+                elsif option_name_handle contains 'lens' or option_name_handle contains 'tint'
+                  assign is_color = true
+                endif
+              -%}
+
+              {%- if is_color and section.settings.variant_style == 'swatches' -%}
+                <div class="main-product__option">
+                  <p class="main-product__option-name">
+                    {{ option.name | escape }}:
+                    <span class="main-product__option-value" data-option-label="{{ option.position }}">
+                      {{- current_variant.options[option.position | minus: 1] -}}
+                    </span>
+                  </p>
+                  {%- render 'variant-swatches',
+                    product: product,
+                    context: 'page',
+                    option_name: option.name,
+                    current_value: current_variant.options[option.position | minus: 1]
+                  -%}
+                </div>
+              {%- else -%}
+                <div class="main-product__option">
+                  <label
+                    class="main-product__option-name"
+                    for="Option-{{ section.id }}-{{ option.position }}"
+                  >
+                    {{ option.name | escape }}
+                  </label>
+                  <select
+                    class="main-product__select"
+                    id="Option-{{ section.id }}-{{ option.position }}"
+                    data-option-select
+                    data-option-index="{{ option.position | minus: 1 }}"
+                  >
+                    {%- for value in option.values -%}
+                      {%- liquid
+                        assign variant = product.variants | where: 'option' | append: option.position, value | first
+                        assign available = false
+                        if variant and variant.available
+                          assign available = true
+                        endif
+                      -%}
+                      <option
+                        value="{{ value | escape }}"
+                        {% if value == current_variant.options[option.position | minus: 1] %}selected{% endif %}
+                        {% unless available %}disabled{% endunless %}
+                      >
+                        {{ value | escape }}{% unless available %} — {{ 'products.product.unavailable' | t }}{% endunless %}
+                      </option>
+                    {%- endfor -%}
+                  </select>
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+
+            <select
+              name="id"
+              id="VariantSelect-{{ section.id }}"
+              class="visually-hidden"
+              data-variant-select
+            >
+              {%- for variant in product.variants -%}
+                <option
+                  value="{{ variant.id }}"
+                  {% if variant.id == current_variant.id %}selected{% endif %}
+                  {% unless variant.available %}disabled{% endunless %}
+                  data-available="{{ variant.available }}"
+                  data-price="{{ variant.price }}"
+                  data-compare-price="{{ variant.compare_at_price }}"
+                  data-sku="{{ variant.sku }}"
+                  data-image="{{ variant.featured_media.preview_image | image_url: width: 600 }}"
+                  data-media-id="{{ variant.featured_media.id }}"
+                >
+                  {{ variant.title | escape }} - {{ variant.price | money }}
+                </option>
+              {%- endfor -%}
+            </select>
+          </div>
+        {%- endunless -%}
+
+        {%- comment -%} Quantity Selector {%- endcomment -%}
+        <div class="main-product__quantity" data-quantity>
+          <label class="main-product__quantity-label" for="Quantity-{{ section.id }}">
+            {{ 'products.product.quantity' | t }}
+          </label>
+          <div class="main-product__quantity-controls">
+            <button
+              type="button"
+              class="main-product__quantity-btn"
+              data-quantity-decrease
+              aria-label="{{ 'products.product.decrease_quantity' | t }}"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </button>
+            <input
+              type="number"
+              name="quantity"
+              id="Quantity-{{ section.id }}"
+              class="main-product__quantity-input"
+              value="1"
+              min="1"
+              max="{{ current_variant.inventory_quantity | default: 999 }}"
+              form="{{ form_id }}"
+              data-quantity-input
+              aria-label="{{ 'products.product.quantity' | t }}"
+            >
+            <button
+              type="button"
+              class="main-product__quantity-btn"
+              data-quantity-increase
+              aria-label="{{ 'products.product.increase_quantity' | t }}"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2"/>
+                <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {%- comment -%} Add to Cart {%- endcomment -%}
+        {%- form 'product', product, id: form_id, class: 'main-product__form' -%}
+          <input
+            type="hidden"
+            name="id"
+            value="{{ current_variant.id }}"
+            data-product-id-input
+          >
+
+          <button
+            type="submit"
+            name="add"
+            class="main-product__atc btn btn--accent"
+            data-add-to-cart
+            {% unless current_variant.available %}disabled{% endunless %}
+            aria-label="{% if current_variant.available %}{{ 'products.product.add_to_cart' | t }} — {{ product.title | escape }}{% else %}{{ 'products.product.sold_out' | t }}{% endif %}"
+          >
+            <span class="main-product__atc-text" data-atc-text>
+              {%- if current_variant.available -%}
+                {{ 'products.product.add_to_cart' | t }}
+              {%- else -%}
+                {{ 'products.product.sold_out' | t }}
+              {%- endif -%}
+            </span>
+
+            <span class="main-product__atc-price" data-atc-price>
+              {%- if current_variant.available -%}
+                — {{ current_variant.price | money }}
+              {%- endif -%}
+            </span>
+
+            {%- comment -%} Loading Spinner {%- endcomment -%}
+            <span class="main-product__atc-spinner" data-atc-spinner aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.4" stroke-dashoffset="10" opacity="0.3"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.4" stroke-dashoffset="10" class="main-product__atc-spinner-circle"/>
+              </svg>
+            </span>
+          </button>
+        {%- endform -%}
+
+        {%- comment -%} Size Guide (Collapsible) {%- endcomment -%}
+        {%- if show_size_guide -%}
+          <div class="main-product__accordion" data-accordion>
+            <button
+              type="button"
+              class="main-product__accordion-toggle"
+              data-accordion-toggle
+              aria-expanded="false"
+              aria-controls="AccordionSizeGuide-{{ section.id }}"
+            >
+              <span class="main-product__accordion-title">{{ 'products.product.size_guide' | t }}</span>
+              <span class="main-product__accordion-icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2"/>
+                  <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </span>
+            </button>
+            <div
+              class="main-product__accordion-content"
+              id="AccordionSizeGuide-{{ section.id }}"
+              data-accordion-content
+              hidden
+            >
+              {%- render 'size-guide', product: product -%}
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Description Accordion {%- endcomment -%}
+        {%- if product.description != blank -%}
+          <div class="main-product__accordion" data-accordion>
+            <button
+              type="button"
+              class="main-product__accordion-toggle"
+              data-accordion-toggle
+              aria-expanded="false"
+              aria-controls="AccordionDescription-{{ section.id }}"
+            >
+              <span class="main-product__accordion-title">{{ 'products.product.description' | t }}</span>
+              <span class="main-product__accordion-icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2"/>
+                  <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </span>
+            </button>
+            <div
+              class="main-product__accordion-content"
+              id="AccordionDescription-{{ section.id }}"
+              data-accordion-content
+              hidden
+            >
+              <div class="rte">
+                {{ product.description }}
+              </div>
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Shipping & Returns Accordion {%- endcomment -%}
+        <div class="main-product__accordion" data-accordion>
+          <button
+            type="button"
+            class="main-product__accordion-toggle"
+            data-accordion-toggle
+            aria-expanded="false"
+            aria-controls="AccordionShipping-{{ section.id }}"
+          >
+            <span class="main-product__accordion-title">{{ 'products.product.shipping' | t }}</span>
+            <span class="main-product__accordion-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2"/>
+                <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </span>
+          </button>
+          <div
+            class="main-product__accordion-content"
+            id="AccordionShipping-{{ section.id }}"
+            data-accordion-content
+            hidden
+          >
+            <div class="rte">
+              {%- if section.settings.shipping_text != blank -%}
+                {{ section.settings.shipping_text }}
+              {%- else -%}
+                <p>{{ 'products.product.shipping_default' | t }}</p>
+              {%- endif -%}
+            </div>
+          </div>
+        </div>
+
+        {%- comment -%} Lens Technology Accordion {%- endcomment -%}
+        {%- if section.settings.lens_technology_text != blank -%}
+          <div class="main-product__accordion" data-accordion>
+            <button
+              type="button"
+              class="main-product__accordion-toggle"
+              data-accordion-toggle
+              aria-expanded="false"
+              aria-controls="AccordionLens-{{ section.id }}"
+            >
+              <span class="main-product__accordion-title">{{ 'products.product.lens_technology' | t }}</span>
+              <span class="main-product__accordion-icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2"/>
+                  <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </span>
+            </button>
+            <div
+              class="main-product__accordion-content"
+              id="AccordionLens-{{ section.id }}"
+              data-accordion-content
+              hidden
+            >
+              <div class="rte">
+                {{ section.settings.lens_technology_text }}
+              </div>
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Trust Badges {%- endcomment -%}
+        {%- if section.settings.show_trust_badges -%}
+          <div class="main-product__trust-badges">
+            <div class="main-product__trust-badge">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="12" cy="16" r="1" fill="currentColor"/>
+              </svg>
+              <span>{{ 'products.product.secure_checkout' | t }}</span>
+            </div>
+            <div class="main-product__trust-badge">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="1" y="3" width="15" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M16 8h5l3 4v6h-3M16 8v10" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="6.5" cy="18.5" r="1.5" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="16.5" cy="18.5" r="1.5" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+              <span>{{ 'products.product.free_shipping_badge' | t }}</span>
+            </div>
+            <div class="main-product__trust-badge">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+              <span>{{ 'products.product.easy_returns' | t }}</span>
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Share Buttons {%- endcomment -%}
+        {%- if section.settings.show_share -%}
+          <div class="main-product__share">
+            <span class="main-product__share-label">{{ 'products.product.share' | t }}</span>
+            <div class="main-product__share-buttons">
+              <a
+                href="https://www.facebook.com/sharer/sharer.php?u={{ product.url | prepend: shop.url | url_encode }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="main-product__share-btn"
+                aria-label="{{ 'products.product.share_on_facebook' | t }}"
+              >
+                {%- render 'icon-facebook' -%}
+              </a>
+              <a
+                href="https://twitter.com/intent/tweet?text={{ product.title | url_encode }}&url={{ product.url | prepend: shop.url | url_encode }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="main-product__share-btn"
+                aria-label="{{ 'products.product.share_on_twitter' | t }}"
+              >
+                {%- render 'icon-twitter' -%}
+              </a>
+              <a
+                href="https://pinterest.com/pin/create/button/?url={{ product.url | prepend: shop.url | url_encode }}&media={{ featured_media.preview_image | image_url: width: 1024 | url_encode }}&description={{ product.title | url_encode }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="main-product__share-btn"
+                aria-label="{{ 'products.product.share_on_pinterest' | t }}"
+              >
+                {%- render 'icon-pinterest' -%}
+              </a>
+              <button
+                type="button"
+                class="main-product__share-btn"
+                data-copy-link
+                aria-label="{{ 'products.product.share_copy_link' | t }}"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+              </button>
+            </div>
+            <span class="main-product__share-copied" data-copied-message hidden>
+              {{ 'products.product.link_copied' | t }}
+            </span>
+          </div>
+        {%- endif -%}
+
+      </div>{# /.main-product__details-inner #}
+    </div>{# /.main-product__details #}
+  </div>{# /.main-product__wrapper #}
+</div>{# /.main-product #}
+
+{%- comment -%}
+  ============================================
+  SCHEMA — All settings exposed to Theme Editor
+  ============================================
+{%- endcomment -%}
+{% schema %}
+{
+  "name": "t:sections.main-product.name",
+  "tag": "section",
+  "class": "section-spacing",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_details",
+      "label": "Sticky product details",
+      "default": true,
+      "info": "Keep the product details column visible while scrolling images on desktop."
+    },
+    {
+      "type": "select",
+      "id": "gallery_layout",
+      "label": "Gallery layout",
+      "options": [
+        {"value": "thumbnails", "label": "Thumbnail strip"},
+        {"value": "stacked", "label": "Stacked"},
+        {"value": "grid", "label": "Grid"}
+      ],
+      "default": "thumbnails"
+    },
+    {
+      "type": "header",
+      "content": "Image Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_zoom",
+      "label": "Enable image zoom",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_lightbox",
+      "label": "Enable fullscreen lightbox",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Product Information"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Show vendor",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sku",
+      "label": "Show SKU",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_share",
+      "label": "Show share buttons",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Variants"
+    },
+    {
+      "type": "select",
+      "id": "variant_style",
+      "label": "Variant display style",
+      "options": [
+        {"value": "swatches", "label": "Color swatches"},
+        {"value": "buttons", "label": "Buttons"},
+        {"value": "dropdowns", "label": "Dropdowns"}
+      ],
+      "default": "swatches"
+    },
+    {
+      "type": "header",
+      "content": "Size Guide"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_size_guide",
+      "label": "Show size guide",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "size_guide_frame_width",
+      "label": "Default frame width (mm)",
+      "default": "140"
+    },
+    {
+      "type": "text",
+      "id": "size_guide_lens_width",
+      "label": "Default lens width (mm)",
+      "default": "55"
+    },
+    {
+      "type": "text",
+      "id": "size_guide_bridge_width",
+      "label": "Default bridge width (mm)",
+      "default": "18"
+    },
+    {
+      "type": "text",
+      "id": "size_guide_temple_length",
+      "label": "Default temple length (mm)",
+      "default": "145"
+    },
+    {
+      "type": "header",
+      "content": "Product Accordions"
+    },
+    {
+      "type": "richtext",
+      "id": "shipping_text",
+      "label": "Shipping & returns text",
+      "info": "Text displayed in the Shipping & Returns accordion."
+    },
+    {
+      "type": "richtext",
+      "id": "lens_technology_text",
+      "label": "Lens technology text",
+      "info": "Text displayed in the Lens Technology accordion."
+    },
+    {
+      "type": "header",
+      "content": "Trust Badges"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_trust_badges",
+      "label": "Show trust badges",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.main-product.presets.name",
+      "category": "Product"
+    }
+  ]
+}
+{% endschema %}

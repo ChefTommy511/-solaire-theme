@@ -1,10 +1,23 @@
 {
   "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "disabled": true
+    },
+    "header": {
+      "type": "header"
+    },
     "main": {
       "type": "main-search"
+    },
+    "footer": {
+      "type": "footer"
     }
   },
   "order": [
-    "main"
+    "announcement-bar",
+    "header",
+    "main",
+    "footer"
   ]
 }

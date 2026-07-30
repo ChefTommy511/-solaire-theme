@@ -1,5 +1,10 @@
 {
   "general": {
+    "404": {
+      "title": "Page not found",
+      "subtext": "The page you're looking for doesn't exist or has been moved.",
+      "button": "Back to homepage"
+    },
     "meta": {
       "homepage_title": "Premium Eyewear"
     },
@@ -10,7 +15,8 @@
       "footer": "Site footer",
       "main_nav": "Main navigation",
       "skip_to_content": "Skip to content",
-      "search": "Search"
+      "search": "Search",
+      "back_to_top": "Back to top"
     },
     "search": {
       "search": "Search",
@@ -31,14 +37,10 @@
       "country_label": "Country/region"
     },
     "pagination": {
+      "label": "Pagination",
       "previous": "Previous",
       "next": "Next",
       "page": "Page {{ page }}"
-    },
-    "404": {
-      "title": "Page not found",
-      "subtext": "The page you're looking for doesn't exist or has been moved.",
-      "button": "Back to homepage"
     },
     "password": {
       "title": "Opening soon",
@@ -53,12 +55,49 @@
   "sections": {
     "header": {
       "name": "Header",
+      "presets": {
+        "name": "Header"
+      },
+      "secondary_nav": "Secondary navigation",
+      "toggle_submenu": "Toggle submenu",
       "settings": {
+        "logo_image": {
+          "label": "Logo image"
+        },
+        "logo_width": {
+          "label": "Logo width"
+        },
+        "logo_position": {
+          "label": "Logo position",
+          "options": {
+            "left": "Left",
+            "center": "Center"
+          }
+        },
         "main_menu": {
           "label": "Main menu"
         },
         "secondary_menu": {
           "label": "Secondary menu"
+        },
+        "enable_sticky": {
+          "label": "Enable sticky header"
+        },
+        "sticky_style": {
+          "label": "Sticky behavior",
+          "options": {
+            "always": "Always visible",
+            "on_scroll_up": "Show on scroll up"
+          }
+        },
+        "show_search": {
+          "label": "Show search icon"
+        },
+        "show_cart": {
+          "label": "Show cart icon"
+        },
+        "show_account": {
+          "label": "Show account icon"
         },
         "show_social_icons": {
           "label": "Show social icons"
@@ -67,58 +106,79 @@
     },
     "footer": {
       "name": "Footer",
+      "presets": {
+        "name": "Footer"
+      },
+      "all_rights_reserved": "All rights reserved.",
       "settings": {
-        "footer_menu": {
-          "label": "Footer menu"
+        "brand_header": {
+          "content": "Brand"
         },
-        "show_payment_icons_override": {
+        "menus_header": {
+          "content": "Navigation menus"
+        },
+        "newsletter_header": {
+          "content": "Newsletter"
+        },
+        "style_header": {
+          "content": "Style"
+        },
+        "footer_logo": {
+          "label": "Footer logo"
+        },
+        "footer_logo_width": {
+          "label": "Logo width"
+        },
+        "about_text": {
+          "label": "About text"
+        },
+        "show_social": {
+          "label": "Show social media icons"
+        },
+        "quick_links_menu": {
+          "label": "Quick links menu"
+        },
+        "service_menu": {
+          "label": "Customer service menu"
+        },
+        "show_newsletter": {
+          "label": "Show newsletter signup"
+        },
+        "newsletter_heading": {
+          "label": "Newsletter heading"
+        },
+        "newsletter_subtext": {
+          "label": "Newsletter subtext"
+        },
+        "color_scheme": {
+          "label": "Color scheme",
+          "options": {
+            "dark": "Dark",
+            "light": "Light"
+          }
+        },
+        "show_payment_icons": {
           "label": "Show payment icons"
         }
       }
     },
     "hero-banner": {
       "name": "Hero Banner",
+      "label": "Hero banner carousel",
+      "carousel": "carousel",
+      "slide_label": "Slide {{ number }} of {{ total }}",
+      "slide_navigation": "Slide navigation",
+      "previous_slide": "Previous slide",
+      "next_slide": "Next slide",
+      "go_to_slide": "Go to slide {{ number }}",
+      "pause": "Pause autoplay",
+      "default_heading": "Elevate your look",
+      "default_subheading": "Premium eyewear designed for those who see differently",
+      "default_cta": "Shop collection",
       "presets": {
         "name": "Hero Banner"
       },
       "settings": {
-        "image": {
-          "label": "Background image"
-        },
-        "mobile_image": {
-          "label": "Mobile background image"
-        },
-        "heading": {
-          "label": "Heading"
-        },
-        "subheading": {
-          "label": "Subheading"
-        },
-        "button_text": {
-          "label": "Button text"
-        },
-        "button_link": {
-          "label": "Button link"
-        },
-        "button_style": {
-          "label": "Button style",
-          "options": {
-            "primary": "Primary",
-            "accent": "Accent",
-            "outline": "Outline"
-          }
-        },
-        "content_position": {
-          "label": "Content position",
-          "options": {
-            "center": "Center",
-            "left": "Left",
-            "right": "Right"
-          }
-        },
-        "overlay_opacity": {
-          "label": "Overlay opacity"
-        },
         "section_height": {
           "label": "Section height",
           "options": {
@@ -127,7 +187,74 @@
             "large": "Large",
             "fullscreen": "Fullscreen"
           }
+        },
+        "autoplay": {
+          "label": "Auto-rotate slides"
+        },
+        "autoplay_speed": {
+          "label": "Change slides every"
+        },
+        "transition": {
+          "label": "Transition style",
+          "options": {
+            "crossfade": "Crossfade",
+            "slide": "Slide"
+          }
         }
+      },
+      "blocks": {
+        "slide": {
+          "name": "Slide",
+          "settings": {
+            "image": {
+              "label": "Background image"
+            },
+            "mobile_image": {
+              "label": "Mobile background image",
+              "info": "Optional. Falls back to desktop image if not set."
+            },
+            "heading": {
+              "label": "Heading"
+            },
+            "subheading": {
+              "label": "Subheading"
+            },
+            "button_text": {
+              "label": "Button text"
+            },
+            "button_link": {
+              "label": "Button link"
+            },
+            "text_alignment": {
+              "label": "Text alignment",
+              "options": {
+                "left": "Left",
+                "center": "Center",
+                "right": "Right"
+              }
+            },
+            "vertical_alignment": {
+              "label": "Vertical alignment",
+              "options": {
+                "top": "Top",
+                "middle": "Middle",
+                "bottom": "Bottom"
+              }
+            },
+            "overlay_opacity": {
+              "label": "Overlay opacity"
+            },
+            "overlay_color": {
+              "label": "Overlay color"
+            }
+          }
+        }
+      }
+    },
+    "collection-banner": {
+      "name": "Collection Banner",
+      "presets": {
+        "name": "Collection Banner"
       }
     },
     "featured-collection": {
@@ -141,8 +268,8 @@
         "heading": {
           "label": "Heading"
         },
-        "subheading": {
-          "label": "Subheading"
+        "description": {
+          "label": "Description"
         },
         "collection": {
           "label": "Collection"
@@ -151,10 +278,20 @@
           "label": "Products to show"
         },
         "grid_columns": {
-          "label": "Columns"
+          "label": "Columns on desktop"
+        },
+        "show_secondary_image": {
+          "label": "Show second image on hover"
         },
         "show_view_all": {
           "label": "Show \"View all\" button"
+        },
+        "background": {
+          "label": "Background",
+          "options": {
+            "none": "None",
+            "secondary": "Secondary"
+          }
         }
       }
     },
@@ -167,11 +304,35 @@
         "image": {
           "label": "Image"
         },
+        "image_alt": {
+          "label": "Image alt text",
+          "info": "Describe the image for accessibility and SEO."
+        },
+        "image_ratio": {
+          "label": "Image aspect ratio",
+          "options": {
+            "3-2": "Landscape (3:2)",
+            "1-1": "Square (1:1)",
+            "4-5": "Portrait (4:5)",
+            "2-3": "Tall portrait (2:3)"
+          }
+        },
+        "image_fill": {
+          "label": "Fill image container"
+        },
         "layout": {
           "label": "Layout",
           "options": {
             "image_left": "Image left",
             "image_right": "Image right"
+          }
+        },
+        "content_alignment": {
+          "label": "Content alignment",
+          "options": {
+            "top": "Top",
+            "middle": "Middle",
+            "bottom": "Bottom"
           }
         },
         "heading": {
@@ -186,12 +347,12 @@
         "button_link": {
           "label": "Button link"
         },
-        "button_style": {
-          "label": "Button style",
+        "background": {
+          "label": "Background",
           "options": {
-            "primary": "Primary",
-            "accent": "Accent",
-            "outline": "Outline"
+            "none": "None",
+            "secondary": "Secondary",
+            "dark": "Dark"
           }
         }
       }
@@ -236,14 +397,21 @@
         "heading": {
           "label": "Heading"
         },
-        "subtext": {
-          "label": "Subtext"
+        "subheading": {
+          "label": "Subheading"
+        },
+        "button_text": {
+          "label": "Button text"
+        },
+        "placeholder_text": {
+          "label": "Email placeholder text"
         },
         "color_scheme": {
           "label": "Color scheme",
           "options": {
+            "dark": "Dark",
             "light": "Light",
-            "dark": "Dark"
+            "accent": "Gold accent"
           }
         }
       }
@@ -254,21 +422,214 @@
         "name": "Announcement Bar"
       },
       "label": "Announcement",
+      "go_to_message": "Go to message {{ number }}",
       "settings": {
         "enabled": {
           "label": "Show announcement"
         },
-        "message": {
-          "label": "Message"
+        "color_scheme": {
+          "label": "Color scheme",
+          "options": {
+            "dark": "Dark",
+            "light": "Light",
+            "gold": "Gold accent"
+          }
         },
-        "show_close": {
+        "autoplay_speed": {
+          "label": "Autoplay speed",
+          "info": "Time between message rotations when multiple messages exist."
+        },
+        "show_dismiss": {
           "label": "Show close button"
+        }
+      },
+      "blocks": {
+        "message": {
+          "name": "Message",
+          "settings": {
+            "text": {
+              "label": "Message text"
+            },
+            "link": {
+              "label": "Link"
+            }
+          }
+        }
+      }
+    },
+    "main-cart": {
+      "name": "Cart page",
+      "presets": {
+        "name": "Cart page"
+      },
+      "settings": {
+        "show_notes": {
+          "label": "Show order notes"
         },
-        "bg_color": {
-          "label": "Background color"
+        "show_recommendations": {
+          "label": "Show product recommendations"
+        },
+        "recommendations_collection": {
+          "label": "Recommendations collection",
+          "info": "Products from this collection will be shown below the cart."
+        }
+      }
+    },
+    "main-collection": {
+      "name": "Main Collection",
+      "presets": {
+        "name": "Main Collection"
+      }
+    },
+    "main-page": {
+      "name": "Page",
+      "presets": {
+        "name": "Page"
+      },
+      "settings": {
+        "show_title": {
+          "label": "Show page title"
+        },
+        "page_width": {
+          "label": "Page width",
+          "options": {
+            "narrow": "Narrow",
+            "medium": "Medium",
+            "wide": "Wide"
+          }
+        },
+        "text_alignment": {
+          "label": "Text alignment",
+          "options": {
+            "left": "Left",
+            "center": "Center"
+          }
+        },
+        "show_featured_image": {
+          "label": "Show featured image",
+          "info": "Display the page's featured image at the top."
+        }
+      }
+    },
+    "main-password": {
+      "name": "Password",
+      "presets": {
+        "name": "Password"
+      },
+      "settings": {
+        "logo": {
+          "label": "Logo",
+          "info": "Replaces the text title with a logo image."
+        },
+        "heading": {
+          "label": "Heading"
+        },
+        "subtext": {
+          "label": "Subtext"
+        },
+        "placeholder_text": {
+          "label": "Password placeholder text"
+        },
+        "button_text": {
+          "label": "Submit button text"
+        },
+        "marketing_text": {
+          "label": "Marketing text",
+          "info": "Rich text content displayed above the password form."
+        },
+        "background_image": {
+          "label": "Background image",
+          "info": "Full-screen background image. Recommended size: 2000 × 1400px."
+        },
+        "overlay_opacity": {
+          "label": "Overlay opacity"
         },
         "text_color": {
-          "label": "Text color"
+          "label": "Text color",
+          "options": {
+            "light": "Light",
+            "dark": "Dark"
+          }
+        },
+        "show_social": {
+          "label": "Show social icons"
+        }
+      }
+    },
+    "main-product": {
+      "name": "Main Product",
+      "presets": {
+        "name": "Main Product"
+      }
+    },
+    "main-search": {
+      "name": "Search page",
+      "presets": {
+        "name": "Search page"
+      },
+      "title": "Search our store",
+      "results_for": "Results for \"{{ terms }}\"",
+      "results_count": "{{ count }} results found",
+      "initial_title": "What are you looking for?",
+      "initial_subtext": "Enter a search term to find products, articles, and pages.",
+      "suggestions_title": "Popular searches",
+      "shop_all": "Shop all products",
+      "back_home": "Back to home",
+      "no_results_title": "No results for \"{{ terms }}\"",
+      "no_results_subtext": "Try adjusting your search terms or browse our collections.",
+      "article_label": "Article",
+      "page_label": "Page",
+      "settings": {
+        "results_per_page": {
+          "label": "Results per page"
+        },
+        "columns_desktop": {
+          "label": "Columns on desktop"
+        },
+        "columns_mobile": {
+          "label": "Columns on mobile"
+        },
+        "show_suggestions": {
+          "label": "Show search suggestions"
+        }
+      },
+      "blocks": {
+        "suggestion": {
+          "name": "Suggestion",
+          "settings": {
+            "text": {
+              "label": "Suggestion text"
+            }
+          }
+        }
+      }
+    },
+    "main-404": {
+      "name": "404 Page",
+      "presets": {
+        "name": "404 Page"
+      },
+      "view_home": "View all collections",
+      "featured_collections": "Featured collections",
+      "settings": {
+        "heading": {
+          "label": "Heading"
+        },
+        "subtext": {
+          "label": "Subtext"
+        },
+        "button_text": {
+          "label": "Button text"
+        },
+        "show_search": {
+          "label": "Show search bar"
+        },
+        "show_collections": {
+          "label": "Show featured collections"
+        },
+        "collections_list": {
+          "label": "Collections",
+          "info": "Select collections to display as suggestions."
         }
       }
     }
@@ -281,16 +642,34 @@
       "on_sale": "Sale",
       "unavailable": "Unavailable",
       "you_save": "You save {{ amount }}",
+      "you_save_percent": "You save {{ percent }}%",
+      "off": "off",
       "color_options": "Color options",
       "add_to_cart": "Add to cart",
       "sold_out_button": "Sold out",
       "unavailable_button": "Unavailable",
       "quantity": "Quantity",
+      "decrease_quantity": "Decrease quantity",
+      "increase_quantity": "Increase quantity",
       "description": "Description",
       "details": "Details",
       "shipping": "Shipping & Returns",
+      "shipping_default": "Free standard shipping on all orders over $50. Express delivery available. Easy returns within 30 days of purchase.",
       "size_guide": "Size guide",
       "view_size_guide": "View size guide",
+      "size_guide_table": "Frame measurements",
+      "measurements": "Measurements",
+      "measurement": "Measurement",
+      "value": "Value",
+      "frame_width": "Frame width",
+      "lens_width": "Lens width",
+      "bridge_width": "Bridge width",
+      "temple_length": "Temple length",
+      "measurements_disclaimer": "All measurements are approximate and may vary slightly.",
+      "lens_technology": "Lens technology",
+      "secure_checkout": "Secure checkout",
+      "free_shipping_badge": "Free shipping over $50",
+      "easy_returns": "Easy 30-day returns",
       "sku": "SKU: {{ sku }}",
       "barcode": "Barcode: {{ barcode }}",
       "vendor": "By {{ vendor }}",
@@ -305,12 +684,15 @@
       "out_of_stock": "Out of stock",
       "select_options": "Select options",
       "variant_unavailable": "This variant is unavailable",
-      "media_alt": "{{ product_title }} — {{ media_position }}"
+      "media_alt": "{{ product_title }} — {{ media_position }}",
+      "open_lightbox": "Open fullscreen image viewer",
+      "close_lightbox": "Close lightbox",
+      "go_to_media": "Go to image {{ number }}"
     }
   },
   "cart": {
     "general": {
-      "title": "Your cart",
+      "title": "Shopping Cart",
       "empty": "Your cart is empty.",
       "subtotal": "Subtotal",
       "view_cart": "View cart",
@@ -318,6 +700,7 @@
       "continue_shopping": "Continue shopping",
       "quantity": "Quantity",
       "remove": "Remove {{ title }}",
+      "remove_item": "Remove",
       "item_count": {
         "one": "{{ count }} item",
         "other": "{{ count }} items"
@@ -327,8 +710,11 @@
       "notes": "Order notes",
       "notes_placeholder": "Special instructions for your order…",
       "shipping_estimate": "Estimate shipping",
+      "shipping_at_checkout": "Shipping & taxes calculated at checkout",
+      "order_summary": "Order summary",
       "update": "Update cart",
-      "error": "There was an error updating your cart. Please try again."
+      "error": "There was an error updating your cart. Please try again.",
+      "you_might_also_like": "You might also like"
     }
   },
   "customer": {
@@ -378,6 +764,7 @@
         "one": "{{ count }} product",
         "other": "{{ count }} products"
       },
+      "showing_count": "Showing {{ shown }} of {{ total }} products",
       "sort_by": "Sort by",
       "sort_options": {
         "manual": "Featured",
@@ -390,12 +777,28 @@
         "created_descending": "Date, new to old"
       },
       "filter": "Filter",
+      "filter_label": "Filter products",
       "clear_filters": "Clear all",
-      "no_results": "No products match your filters."
+      "clear_all_filters": "Clear all filters",
+      "no_results": "No products match your filters.",
+      "no_results_title": "No products found",
+      "no_results_text": "Try adjusting your filters or clearing them to see all products.",
+      "grid_view": "Grid view",
+      "list_view": "List view",
+      "view_label": "View mode",
+      "secondary_image": "Secondary image",
+      "load_more": "Load more",
+      "price_min": "Minimum price",
+      "price_max": "Maximum price"
+    },
+    "banner": {
+      "breadcrumbs_label": "Collection breadcrumbs",
+      "collections": "Collections"
     }
   },
   "settings_schema": {
     "colors": {
+      "name": "Colors",
       "header": "Colors",
       "bg_primary": {
         "label": "Primary background"
@@ -453,6 +856,7 @@
       }
     },
     "typography": {
+      "name": "Typography",
       "header": "Typography",
       "heading_font": {
         "label": "Heading font",
@@ -494,6 +898,7 @@
       }
     },
     "header": {
+      "name": "Header",
       "header": "Header",
       "logo": {
         "label": "Logo image"
@@ -545,6 +950,7 @@
       }
     },
     "footer": {
+      "name": "Footer",
       "header": "Footer",
       "show_social": {
         "label": "Show social media icons"
@@ -581,6 +987,7 @@
       }
     },
     "product": {
+      "name": "Product page",
       "header": "Product page",
       "image_zoom": {
         "label": "Enable image zoom"
@@ -645,6 +1052,7 @@
       }
     },
     "cart": {
+      "name": "Cart",
       "header": "Cart",
       "cart_type": {
         "label": "Cart type",
@@ -661,13 +1069,14 @@
       },
       "free_shipping": {
         "label": "Free shipping threshold",
-        "info": "Display a free shipping progress bar. Leave blank to disable."
+        "info": "Amount in cents (e.g., 10000 = $100.00). Display a free shipping progress bar. Set to 0 to disable."
       },
       "free_shipping_msg": {
         "label": "Free shipping message"
       }
     },
     "social": {
+      "name": "Social media",
       "header": "Social media",
       "url_info": "Full URL including https://",
       "instagram": {
@@ -696,10 +1105,27 @@
       }
     },
     "favicon": {
+      "name": "Favicon",
       "header": "Favicon",
       "image": {
         "label": "Favicon image",
         "info": "Square image, at least 32x32px. Will be resized automatically."
+      }
+    },
+    "social_image": {
+      "name": "Social sharing",
+      "header": "Social sharing image",
+      "image": {
+        "label": "Social sharing image",
+        "info": "Default image used when your store is shared on social media. Recommended size: 1200x630px."
+      }
+    },
+    "custom_css": {
+      "name": "Custom CSS",
+      "header": "Custom CSS",
+      "code": {
+        "label": "Custom CSS",
+        "info": "Add custom CSS to customize your theme. This will be applied globally."
       }
     }
   }

@@ -66,7 +66,7 @@
   }
 
   // ============================================================
-  // Cart Drawer
+  // Cart Drawer (Enhanced — AJAX fetch, quantity, free shipping)
   // ============================================================
   var CartDrawer = {
     drawer: null,
@@ -74,6 +74,8 @@
     closeButtons: null,
     toggleButtons: null,
     isOpen: false,
+    isLoading: false,
+    freeShippingThreshold: 0,
 
     init: function () {
       this.drawer = qs('#CartDrawer');
@@ -83,7 +85,15 @@
       this.closeButtons = qsa('[data-cart-close]');
       this.toggleButtons = qsa('[data-cart-toggle]');
 
+      var solaire = window.SOLAIRE || {};
+      this.freeShippingThreshold = parseInt(
+        solaire.freeShippingThreshold ||
+        (this.drawer.getAttribute('data-free-shipping-threshold') || '10000'),
+        10
+      );
+
       this.bindEvents();
+      this.bindDelegatedEvents();
       trapFocus(this.drawer);
     },
 
@@ -121,12 +131,55 @@
       });
     },
 
+    bindDelegatedEvents: function () {
+      var self = this;
+      var inner = qs('.cart-drawer__inner', this.drawer);
+      if (!inner) return;
+
+      inner.addEventListener('click', function (e) {
+        var minusBtn = e.target.closest('[data-cart-minus]');
+        if (minusBtn) {
+          e.preventDefault();
+          var key = minusBtn.getAttribute('data-line-key');
+          var currentVal = parseInt(minusBtn.getAttribute('data-current-qty'), 10) || 0;
+          self.updateQuantity(key, currentVal - 1);
+          return;
+        }
+
+        var plusBtn = e.target.closest('[data-cart-plus]');
+        if (plusBtn) {
+          e.preventDefault();
+          var key = plusBtn.getAttribute('data-line-key');
+          var currentVal = parseInt(plusBtn.getAttribute('data-current-qty'), 10) || 0;
+          self.updateQuantity(key, currentVal + 1);
+          return;
+        }
+
+        var removeBtn = e.target.closest('[data-cart-remove-item]');
+        if (removeBtn) {
+          e.preventDefault();
+          var key = removeBtn.getAttribute('data-line-key');
+          self.updateQuantity(key, 0);
+          return;
+        }
+
+        var contLink = e.target.closest('[data-cart-continue]');
+        if (contLink) {
+          self.close();
+          return;
+        }
+      });
+    },
+
     open: function () {
+      var self = this;
       this.drawer.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('drawer-open');
       this.isOpen = true;
 
-      // Focus first focusable element
+      this.fetchCart();
+
       var firstFocusable = qs('button, a[href]', this.drawer);
       if (firstFocusable) {
         setTimeout(function () {
@@ -138,7 +191,231 @@
     close: function () {
       this.drawer.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
+      document.body.classList.remove('drawer-open');
       this.isOpen = false;
+    },
+
+    fetchCart: function () {
+      var self = this;
+      if (this.isLoading) return;
+
+      var contentEl = qs('.cart-drawer__content', this.drawer);
+      if (!contentEl) return;
+
+      this.isLoading = true;
+
+      fetch('/cart.js')
+        .then(function (res) { return res.json(); })
+        .then(function (cart) {
+          var html = self.buildCartHTML(cart);
+          contentEl.innerHTML = html;
+          self.updateBadge(cart.item_count);
+          self.updateFreeShippingBar(cart.total_price);
+        })
+        .catch(function (err) {
+          console.error('[Solaire] Cart fetch error:', err);
+        })
+        .finally(function () {
+          self.isLoading = false;
+        });
+    },
+
+    buildCartHTML: function (cart) {
+      var self = this;
+      var html = '';
+
+      // Free shipping progress bar
+      html += '<div class="cart-drawer__progress-wrapper">';
+      html += '<div class="cart-drawer__progress-header">';
+      var remaining = self.freeShippingThreshold - cart.total_price;
+      if (remaining > 0) {
+        html += '<span class="cart-drawer__progress-text">You\'re ' + self.formatMoney(remaining) + ' away from free shipping.</span>';
+      } else {
+        html += '<span class="cart-drawer__progress-text cart-drawer__progress-text--achieved">You qualify for free shipping!</span>';
+      }
+      html += '<span class="cart-drawer__progress-icon">\u2713</span>';
+      html += '</div>';
+      var fillPct = self.freeShippingThreshold > 0 ? Math.min(100, Math.round((cart.total_price / self.freeShippingThreshold) * 100)) : 0;
+      var barClass = remaining <= 0 ? ' cart-drawer__progress-bar--achieved' : '';
+      html += '<div class="cart-drawer__progress-bar' + barClass + '">';
+      html += '<div class="cart-drawer__progress-fill" style="width:' + fillPct + '%"></div>';
+      html += '</div>';
+      html += '</div>';
+
+      if (cart.items && cart.items.length > 0) {
+        html += '<ul class="cart-items" role="list">';
+        for (var i = 0; i < cart.items.length; i++) {
+          html += self.buildCartItemHTML(cart.items[i]);
+        }
+        html += '</ul>';
+
+        // Cart notes
+        html += '<details class="cart-notes">';
+        html += '<summary class="cart-notes__toggle">Order notes <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l5 5 5-5"/></svg></summary>';
+        html += '<textarea class="cart-notes__textarea" name="note" form="CartDrawerForm" placeholder="Special instructions for your order\u2026"></textarea>';
+        html += '</details>';
+
+        // Footer
+        html += '<div class="cart-drawer__footer">';
+        html += '<div class="cart-drawer__subtotal">';
+        html += '<span class="cart-drawer__subtotal-label">Subtotal</span>';
+        html += '<span class="cart-drawer__subtotal-value">' + self.formatMoney(cart.total_price) + '</span>';
+        html += '</div>';
+        html += '<p class="cart-drawer__shipping-note">Shipping &amp; taxes calculated at checkout</p>';
+        html += '<form id="CartDrawerForm" action="/cart" method="post" class="cart-drawer__form">';
+        html += '<button type="submit" name="checkout" class="cart-drawer__checkout-btn">';
+        html += '<span>Checkout</span>';
+        html += '<span class="cart-drawer__checkout-arrow">&rarr;</span>';
+        html += '</button>';
+        html += '</form>';
+        html += '<a href="/collections/all" class="cart-drawer__continue-shopping" data-cart-continue>Continue shopping</a>';
+        html += '</div>';
+      } else {
+        // Empty state
+        html += '<div class="cart-empty">';
+        html += '<div class="cart-empty__icon">';
+        html += '<svg class="cart-empty__svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>';
+        html += '</div>';
+        html += '<p class="cart-empty__message">Your cart is empty.</p>';
+        html += '<a href="/collections/all" class="btn btn--accent cart-empty__cta" data-cart-continue>Continue shopping</a>';
+        html += '</div>';
+      }
+
+      return html;
+    },
+
+    buildCartItemHTML: function (item) {
+      var html = '';
+      html += '<li class="cart-item" data-line-key="' + this.escapeAttr(item.key) + '">';
+
+      html += '<div class="cart-item__image-wrapper">';
+      html += '<a href="' + this.escapeAttr(item.url) + '" class="cart-item__image-link">';
+      if (item.image) {
+        html += '<img class="cart-item__image" src="' + this.escapeAttr(item.image) + '" alt="' + this.escapeAttr(item.product_title) + '" width="80" height="80" loading="lazy">';
+      } else {
+        html += '<div class="cart-item__image-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>';
+      }
+      html += '</a>';
+      html += '</div>';
+
+      html += '<div class="cart-item__details">';
+      html += '<div class="cart-item__header-row">';
+      html += '<a href="' + this.escapeAttr(item.url) + '" class="cart-item__title">' + this.escapeHtml(item.product_title) + '</a>';
+      html += '<button type="button" class="cart-item__remove" data-cart-remove-item data-line-key="' + this.escapeAttr(item.key) + '" aria-label="Remove item"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15"/></svg></button>';
+      html += '</div>';
+      if (item.variant_title) {
+        html += '<p class="cart-item__variant">' + this.escapeHtml(item.variant_title) + '</p>';
+      }
+
+      html += '<div class="cart-item__bottom-row">';
+      html += '<div class="cart-item__quantity">';
+      html += '<button type="button" class="cart-item__qty-btn" data-cart-minus data-line-key="' + this.escapeAttr(item.key) + '" data-current-qty="' + item.quantity + '" aria-label="Decrease quantity"' + (item.quantity <= 1 ? ' disabled' : '') + '><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15"/></svg></button>';
+      html += '<span class="cart-item__qty-value">' + item.quantity + '</span>';
+      html += '<button type="button" class="cart-item__qty-btn cart-item__qty-btn--plus" data-cart-plus data-line-key="' + this.escapeAttr(item.key) + '" data-current-qty="' + item.quantity + '" aria-label="Increase quantity">+</button>';
+      html += '</div>';
+      html += '<div class="cart-item__line-price">';
+      if (item.original_line_price && item.original_line_price > item.final_line_price) {
+        html += '<span class="cart-item__compare-at">' + this.formatMoney(item.original_line_price) + '</span>';
+      }
+      html += '<span class="cart-item__final-price">' + this.formatMoney(item.final_line_price) + '</span>';
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+
+      html += '</li>';
+      return html;
+    },
+
+    updateQuantity: function (lineKey, newQty) {
+      var self = this;
+      var body = JSON.stringify({ id: lineKey, quantity: newQty });
+
+      fetch('/cart/change.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (cart) {
+          if (newQty === 0) {
+            var itemEl = qs('.cart-item[data-line-key="' + CSS.escape(lineKey) + '"]', self.drawer);
+            if (itemEl) {
+              itemEl.classList.add('cart-item--removing');
+              itemEl.addEventListener('animationend', function handler() {
+                itemEl.removeEventListener('animationend', handler);
+                if (itemEl.parentNode) itemEl.parentNode.removeChild(itemEl);
+                self.refreshCartUI(cart);
+              });
+              return;
+            }
+          }
+          self.refreshCartUI(cart);
+        })
+        .catch(function (err) {
+          console.error('[Solaire] Cart update error:', err);
+        });
+    },
+
+    refreshCartUI: function (cart) {
+      var contentEl = qs('.cart-drawer__content', this.drawer);
+      if (!contentEl) return;
+
+      var html = this.buildCartHTML(cart);
+      contentEl.innerHTML = html;
+      this.updateBadge(cart.item_count);
+      this.updateFreeShippingBar(cart.total_price);
+    },
+
+    updateBadge: function (count) {
+      var counts = qsa('.site-header__cart-count, [data-cart-count]');
+      counts.forEach(function (el) {
+        el.setAttribute('data-cart-count', count);
+        el.textContent = count;
+      });
+    },
+
+    updateFreeShippingBar: function (totalPrice) {
+      var wrapper = qs('.cart-drawer__progress-wrapper', this.drawer);
+      if (!wrapper) return;
+
+      var fill = qs('.cart-drawer__progress-fill', wrapper);
+      var textEl = qs('.cart-drawer__progress-text', wrapper);
+      var bar = qs('.cart-drawer__progress-bar', wrapper);
+
+      if (!fill) return;
+
+      var remaining = this.freeShippingThreshold - totalPrice;
+      var fillPct = this.freeShippingThreshold > 0 ? Math.min(100, Math.round((totalPrice / this.freeShippingThreshold) * 100)) : 0;
+
+      fill.style.width = fillPct + '%';
+
+      if (remaining <= 0) {
+        if (textEl) {
+          textEl.classList.add('cart-drawer__progress-text--achieved');
+          textEl.textContent = 'You qualify for free shipping!';
+        }
+        if (bar) bar.classList.add('cart-drawer__progress-bar--achieved');
+      } else {
+        if (textEl) {
+          textEl.classList.remove('cart-drawer__progress-text--achieved');
+          textEl.textContent = 'You\'re ' + this.formatMoney(remaining) + ' away from free shipping.';
+        }
+        if (bar) bar.classList.remove('cart-drawer__progress-bar--achieved');
+      }
+    },
+
+    formatMoney: function (cents) {
+      return '$' + (cents / 100).toFixed(2);
+    },
+
+    escapeHtml: function (str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    },
+
+    escapeAttr: function (str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
   };
 
@@ -426,6 +703,1301 @@
   };
 
   // ============================================================
+  // Hero Banner Carousel
+  // ============================================================
+  var HeroCarousel = {
+    instances: [],
+
+    init: function () {
+      var self = this;
+      var carousels = qsa('.hero-banner--carousel');
+
+      carousels.forEach(function (el) {
+        var instance = self.createInstance(el);
+        if (instance) {
+          self.instances.push(instance);
+        }
+      });
+    },
+
+    createInstance: function (el) {
+      var slides = qsa('.hero-banner__slide', el);
+      var dots = qsa('.hero-banner__dot', el);
+      var prevBtn = qs('[data-hero-prev]', el);
+      var nextBtn = qs('[data-hero-next]', el);
+      var pauseBtn = qs('[data-hero-pause]', el);
+      var autoplay = el.getAttribute('data-autoplay') === 'true';
+      var speed = parseInt(el.getAttribute('data-autoplay-speed'), 10) || 5000;
+
+      if (slides.length < 2) return null;
+
+      var currentIndex = 0;
+      var intervalId = null;
+      var isPaused = false;
+
+      var instance = {
+        el: el,
+        slides: slides,
+        dots: dots,
+        currentIndex: currentIndex,
+        goTo: goTo,
+        next: next,
+        prev: prev,
+        pause: pause,
+        resume: resume,
+        destroy: destroy
+      };
+
+      function goTo(index) {
+        if (index === currentIndex) return;
+        if (index < 0) index = slides.length - 1;
+        if (index >= slides.length) index = 0;
+
+        // Deactivate current
+        slides[currentIndex].classList.remove('hero-banner__slide--active');
+        slides[currentIndex].setAttribute('aria-hidden', 'true');
+        if (dots[currentIndex]) {
+          dots[currentIndex].classList.remove('hero-banner__dot--active');
+          dots[currentIndex].setAttribute('aria-selected', 'false');
+        }
+
+        // Activate new
+        currentIndex = index;
+        slides[currentIndex].classList.add('hero-banner__slide--active');
+        slides[currentIndex].setAttribute('aria-hidden', 'false');
+        if (dots[currentIndex]) {
+          dots[currentIndex].classList.add('hero-banner__dot--active');
+          dots[currentIndex].setAttribute('aria-selected', 'true');
+        }
+
+        instance.currentIndex = currentIndex;
+      }
+
+      function next() {
+        goTo(currentIndex + 1);
+      }
+
+      function prev() {
+        goTo(currentIndex - 1);
+      }
+
+      function pause() {
+        isPaused = true;
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        if (pauseBtn) {
+          pauseBtn.setAttribute('aria-label', pauseBtn.getAttribute('aria-label').replace('Pause', 'Play'));
+        }
+      }
+
+      function resume() {
+        isPaused = false;
+        if (autoplay && !intervalId) {
+          intervalId = setInterval(next, speed);
+        }
+        if (pauseBtn) {
+          pauseBtn.setAttribute('aria-label', pauseBtn.getAttribute('aria-label').replace('Play', 'Pause'));
+        }
+      }
+
+      function destroy() {
+        if (intervalId) clearInterval(intervalId);
+      }
+
+      // Event listeners
+      if (prevBtn) prevBtn.addEventListener('click', prev);
+      if (nextBtn) nextBtn.addEventListener('click', next);
+
+      if (dots.length) {
+        dots.forEach(function (dot, i) {
+          dot.addEventListener('click', function () {
+            goTo(i);
+          });
+        });
+      }
+
+      if (pauseBtn) {
+        pauseBtn.addEventListener('click', function () {
+          if (isPaused) {
+            resume();
+          } else {
+            pause();
+          }
+        });
+      }
+
+      // Pause on hover
+      el.addEventListener('mouseenter', function () {
+        if (autoplay && !isPaused) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      });
+
+      el.addEventListener('mouseleave', function () {
+        if (autoplay && !isPaused && !intervalId) {
+          intervalId = setInterval(next, speed);
+        }
+      });
+
+      // Touch/swipe support
+      var touchStartX = 0;
+      var touchEndX = 0;
+
+      el.addEventListener('touchstart', function (e) {
+        touchStartX = e.changedTouches[0].screenX;
+      }, { passive: true });
+
+      el.addEventListener('touchend', function (e) {
+        touchEndX = e.changedTouches[0].screenX;
+        var diff = touchStartX - touchEndX;
+        if (Math.abs(diff) > 50) {
+          if (diff > 0) {
+            next();
+          } else {
+            prev();
+          }
+        }
+      }, { passive: true });
+
+      // Keyboard navigation
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prev();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          next();
+        }
+      });
+
+      // Autoplay
+      if (autoplay) {
+        intervalId = setInterval(next, speed);
+      }
+
+      return instance;
+    }
+  };
+
+  // ============================================================
+  // Product Page — Image Gallery
+  // ============================================================
+  var ProductGallery = {
+    init: function () {
+      var self = this;
+      var galleries = qsa('.main-product');
+
+      galleries.forEach(function (el) {
+        self.initInstance(el);
+      });
+    },
+
+    initInstance: function (container) {
+      var primaryMedia = qs('.main-product__primary-media', container);
+      var featuredImage = qs('.main-product__featured-image, .image-zoom__main', container);
+      var zoomContainer = qs('.image-zoom', container);
+      var thumbnails = qsa('[data-thumbnail]', container);
+      var dots = qsa('[data-dot]', container);
+      var variantSelect = qs('[data-variant-select]', container);
+      var swatchInputs = qsa('.variant-swatches__input', container);
+      var optionSelects = qsa('[data-option-select]', container);
+      var optionLabels = qsa('[data-option-label]', container);
+
+      // --- Thumbnail Click ---
+      thumbnails.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var mediaId = btn.getAttribute('data-media-id');
+          var mediaPosition = parseInt(btn.getAttribute('data-media-position'), 10);
+          self.switchMedia(container, mediaId, mediaPosition);
+        });
+      });
+
+      // --- Dot Click ---
+      dots.forEach(function (dot) {
+        dot.addEventListener('click', function () {
+          var mediaId = dot.getAttribute('data-media-id');
+          var idx = dots.indexOf(dot);
+          self.switchMedia(container, mediaId, idx + 1);
+        });
+      });
+
+      // --- Variant Swatch Input Change ---
+      swatchInputs.forEach(function (input) {
+        input.addEventListener('change', function () {
+          self.onVariantChange(container);
+        });
+      });
+
+      // --- Option Select Change ---
+      optionSelects.forEach(function (select) {
+        select.addEventListener('change', function () {
+          var optionIndex = parseInt(select.getAttribute('data-option-index'), 10);
+          var value = select.value;
+
+          // Update the option label display
+          if (optionLabels && optionLabels.length > optionIndex) {
+            optionLabels[optionIndex].textContent = value;
+          }
+
+          // Update swatch selection if present
+          var swatchInput = qs(
+            '.variant-swatches__input[value="' + CSS.escape(value) + '"]',
+            container
+          );
+          if (swatchInput && !swatchInput.checked) {
+            swatchInput.checked = true;
+            self.updateSwatchStates(container, swatchInput);
+          }
+
+          self.onVariantChange(container);
+        });
+      });
+
+      // --- Touch Swipe for Mobile Gallery ---
+      self.initMobileSwipe(container);
+    },
+
+    switchMedia: function (container, mediaId, position) {
+      var featuredImage = qs('.main-product__featured-image, .image-zoom__main', container);
+      var zoomContainer = qs('.image-zoom', container);
+      var variantSelect = qs('[data-variant-select]', container);
+
+      // Update thumbnails
+      var thumbnails = qsa('[data-thumbnail]', container);
+      thumbnails.forEach(function (btn) {
+        var isActive = btn.getAttribute('data-media-id') === mediaId;
+        btn.classList.toggle('main-product__thumbnail--active', isActive);
+        if (isActive) {
+          btn.setAttribute('aria-current', 'true');
+        } else {
+          btn.removeAttribute('aria-current');
+        }
+      });
+
+      // Update dots
+      var dots = qsa('[data-dot]', container);
+      dots.forEach(function (dot, i) {
+        var isActive = i + 1 === position || dot.getAttribute('data-media-id') === mediaId;
+        dot.classList.toggle('main-product__dot--active', isActive);
+        if (isActive) {
+          dot.setAttribute('aria-current', 'true');
+        } else {
+          dot.removeAttribute('aria-current');
+        }
+      });
+
+      // Update the featured image
+      var selectedOption = variantSelect ? variantSelect.options[variantSelect.selectedIndex] : null;
+      if (selectedOption) {
+        var newImageSrc = selectedOption.getAttribute('data-image');
+        var newMediaId = selectedOption.getAttribute('data-media-id');
+        if (newImageSrc && featuredImage) {
+          featuredImage.src = newImageSrc;
+          featuredImage.srcset = featuredImage.getAttribute('srcset') || newImageSrc;
+        }
+        // Update zoom lens image
+        if (zoomContainer) {
+          var lensImg = qs('.image-zoom__lens-image', zoomContainer);
+          if (lensImg && newImageSrc) {
+            lensImg.src = newImageSrc;
+          }
+        }
+      }
+    },
+
+    onVariantChange: function (container) {
+      var variantSelect = qs('[data-variant-select]', container);
+      if (!variantSelect) return;
+
+      // Find matching variant from current selections
+      var swatchInputs = qsa('.variant-swatches__input:checked', container);
+      var optionSelects = qsa('[data-option-select]', container);
+
+      var selectedOptions = [];
+      swatchInputs.forEach(function (input) {
+        selectedOptions.push(input.value);
+      });
+      optionSelects.forEach(function (select) {
+        var idx = parseInt(select.getAttribute('data-option-index'), 10);
+        if (selectedOptions.length <= idx) {
+          selectedOptions.push(select.value);
+        } else {
+          selectedOptions[idx] = select.value;
+        }
+      });
+
+      if (selectedOptions.length === 0) return;
+
+      // Find matching option in the variant select
+      var options = variantSelect.options;
+      for (var i = 0; i < options.length; i++) {
+        var opt = options[i];
+        if (!opt.disabled && opt.text.indexOf(selectedOptions.join(' / ')) === 0) {
+          if (variantSelect.selectedIndex !== i) {
+            variantSelect.selectedIndex = i;
+            variantSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          break;
+        }
+      }
+
+      // Update UI: price, image, available state
+      self.updateProductUI(container);
+    },
+
+    updateProductUI: function (container) {
+      var variantSelect = qs('[data-variant-select]', container);
+      if (!variantSelect || variantSelect.selectedIndex < 0) return;
+
+      var selectedOption = variantSelect.options[variantSelect.selectedIndex];
+      var isAvailable = selectedOption.getAttribute('data-available') === 'true';
+      var newPrice = selectedOption.getAttribute('data-price');
+      var newComparePrice = selectedOption.getAttribute('data-compare-price');
+      var newSku = selectedOption.getAttribute('data-sku');
+      var newImageSrc = selectedOption.getAttribute('data-image');
+      var newMediaId = selectedOption.getAttribute('data-media-id');
+
+      // Update price
+      var priceEl = qs('.main-product__price .price', container);
+      if (priceEl && newPrice) {
+        // Shopify handles this via AJAX; simplified for now
+        // In a real theme, this would use the Shopify API
+      }
+
+      // Update SKU
+      var skuEl = qs('[data-sku]', container);
+      if (skuEl && newSku) {
+        skuEl.textContent = newSku;
+      }
+
+      // Update ATC button
+      var atcBtn = qs('[data-add-to-cart]', container);
+      var atcText = qs('[data-atc-text]', container);
+      var atcPrice = qs('[data-atc-price]', container);
+      var productIdInput = qs('[data-product-id-input]', container);
+
+      if (atcBtn) {
+        if (isAvailable) {
+          atcBtn.disabled = false;
+          atcBtn.classList.remove('btn--accent--disabled');
+        } else {
+          atcBtn.disabled = true;
+        }
+      }
+
+      if (productIdInput) {
+        productIdInput.value = selectedOption.value;
+      }
+
+      // Update swatch states (disabled/unavailable)
+      this.updateSwatchDisabledStates(container, variantSelect);
+    },
+
+    updateSwatchStates: function (container, activeInput) {
+      var swatchLabels = qsa('.variant-swatches__label', container);
+      swatchLabels.forEach(function (label) {
+        var input = qs('.variant-swatches__input', label);
+        if (input) {
+          label.classList.toggle('variant-swatches__label--selected', input.checked);
+        }
+      });
+    },
+
+    updateSwatchDisabledStates: function (container, variantSelect) {
+      if (!variantSelect) return;
+
+      var swatchInputs = qsa('.variant-swatches__input', container);
+      var availableValues = {};
+      for (var i = 0; i < variantSelect.options.length; i++) {
+        if (variantSelect.options[i].getAttribute('data-available') === 'true') {
+          // Extract option values from the variant title
+          var values = variantSelect.options[i].text.split(' / ');
+          values.forEach(function (v, idx) {
+            v = v.trim();
+            if (availableValues[idx]) {
+              availableValues[idx].push(v);
+            } else {
+              availableValues[idx] = [v];
+            }
+          });
+        }
+      }
+
+      swatchInputs.forEach(function (input) {
+        var label = input.closest('.variant-swatches__label');
+        if (label) {
+          var optionIndex = parseInt(
+            (label.closest('[data-option-index]') || {}).getAttribute('data-option-index') || '0',
+            10
+          );
+          var value = input.value.trim();
+          var avail = availableValues[optionIndex] || [];
+          var isAvail = avail.indexOf(value) !== -1;
+
+          if (!isAvail && !input.checked) {
+            label.classList.add('variant-swatches__label--disabled');
+            input.disabled = true;
+          } else {
+            label.classList.remove('variant-swatches__label--disabled');
+            input.disabled = false;
+          }
+        }
+      });
+    },
+
+    initMobileSwipe: function (container) {
+      var startX = 0;
+      var endX = 0;
+      var gallery = qs('.main-product__gallery', container);
+
+      if (!gallery) return;
+
+      gallery.addEventListener('touchstart', function (e) {
+        startX = e.changedTouches[0].screenX;
+      }, { passive: true });
+
+      gallery.addEventListener('touchend', function (e) {
+        endX = e.changedTouches[0].screenX;
+        var diff = startX - endX;
+
+        if (Math.abs(diff) > 50 && window.innerWidth < 768) {
+          var dots = qsa('[data-dot]', container);
+          var activeDot = qs('.main-product__dot--active', container);
+          var currentIndex = dots.indexOf(activeDot);
+
+          if (diff > 0 && currentIndex < dots.length - 1) {
+            // Swipe left — next
+            var nextDot = dots[currentIndex + 1];
+            nextDot.click();
+          } else if (diff < 0 && currentIndex > 0) {
+            // Swipe right — previous
+            var prevDot = dots[currentIndex - 1];
+            prevDot.click();
+          }
+        }
+      }, { passive: true });
+    }
+  };
+
+  // ============================================================
+  // Image Zoom
+  // ============================================================
+  var ImageZoom = {
+    init: function () {
+      var self = this;
+      var zoomContainers = qsa('.image-zoom[data-zoom-enabled="true"]');
+
+      zoomContainers.forEach(function (el) {
+        self.initInstance(el);
+      });
+    },
+
+    initInstance: function (zoomEl) {
+      var lens = qs('.image-zoom__lens', zoomEl);
+      var lensImg = qs('.image-zoom__lens-image', lens);
+      var mainImg = qs('.image-zoom__main', zoomEl);
+
+      if (!lens || !mainImg) return;
+
+      // Skip on touch devices
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return;
+
+      zoomEl.addEventListener('mouseenter', function () {
+        zoomEl.classList.add('image-zoom--active');
+      });
+
+      zoomEl.addEventListener('mouseleave', function () {
+        zoomEl.classList.remove('image-zoom--active');
+      });
+
+      zoomEl.addEventListener('mousemove', function (e) {
+        var rect = zoomEl.getBoundingClientRect();
+        var x = e.clientX - rect.left;
+        var y = e.clientY - rect.top;
+
+        // Lens position
+        var lensW = lens.offsetWidth / 2;
+        var lensH = lens.offsetHeight / 2;
+        lens.style.left = x + 'px';
+        lens.style.top = y + 'px';
+
+        // Lens image position (4x zoom)
+        if (lensImg) {
+          var imgW = mainImg.naturalWidth || mainImg.offsetWidth;
+          var imgH = mainImg.naturalHeight || mainImg.offsetHeight;
+          var scaleX = imgW / rect.width;
+          var scaleY = imgH / rect.height;
+
+          lensImg.style.left = '-' + (x * scaleX * 4 - lensW) + 'px';
+          lensImg.style.top = '-' + (y * scaleY * 4 - lensH) + 'px';
+        }
+      });
+    }
+  };
+
+  // ============================================================
+  // Quantity Selector
+  // ============================================================
+  var QuantitySelector = {
+    init: function () {
+      var self = this;
+      var containers = qsa('.main-product__quantity-controls');
+
+      containers.forEach(function (el) {
+        var decreaseBtn = qs('[data-quantity-decrease]', el);
+        var increaseBtn = qs('[data-quantity-increase]', el);
+        var input = qs('[data-quantity-input]', el);
+
+        if (decreaseBtn) {
+          decreaseBtn.addEventListener('click', function () {
+            var val = parseInt(input.value, 10) || 1;
+            if (val > 1) {
+              input.value = val - 1;
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          });
+        }
+
+        if (increaseBtn) {
+          increaseBtn.addEventListener('click', function () {
+            var val = parseInt(input.value, 10) || 0;
+            var max = parseInt(input.getAttribute('max'), 10) || 999;
+            if (val < max) {
+              input.value = val + 1;
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          });
+        }
+      });
+    }
+  };
+
+  // ============================================================
+  // Product Accordions
+  // ============================================================
+  var ProductAccordions = {
+    init: function () {
+      var self = this;
+      var toggles = qsa('[data-accordion-toggle]');
+
+      toggles.forEach(function (toggle) {
+        toggle.addEventListener('click', function () {
+          var contentId = toggle.getAttribute('aria-controls');
+          var content = document.getElementById(contentId);
+          var isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+
+          toggle.setAttribute('aria-expanded', !isExpanded);
+
+          if (content) {
+            if (isExpanded) {
+              content.setAttribute('hidden', '');
+            } else {
+              content.removeAttribute('hidden');
+            }
+          }
+        });
+      });
+    }
+  };
+
+  // ============================================================
+  // Add to Cart Handler
+  // ============================================================
+  var AddToCart = {
+    init: function () {
+      var self = this;
+      var forms = qsa('.main-product__form');
+
+      forms.forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+          var mainProduct = form.closest('.main-product');
+          var atcBtn = qs('[data-add-to-cart]', mainProduct);
+          if (atcBtn && !atcBtn.disabled) {
+            // Prevent double-submission
+            if (atcBtn.classList.contains('main-product__atc--loading')) {
+              e.preventDefault();
+              return;
+            }
+            atcBtn.classList.add('main-product__atc--loading');
+            atcBtn.disabled = true;
+
+            // Remove loading state after timeout (form submits normally)
+            // Shopify handles the AJAX redirect or page reload
+            setTimeout(function () {
+              atcBtn.classList.remove('main-product__atc--loading');
+              atcBtn.disabled = false;
+            }, 5000);
+          }
+        });
+      });
+    }
+  };
+
+  // ============================================================
+  // Sticky Product Details
+  // ============================================================
+  var StickyDetails = {
+    init: function () {
+      var self = this;
+      var details = qsa('[data-product-details]');
+
+      details.forEach(function (el) {
+        var container = el.closest('.main-product');
+        if (!container) return;
+
+        var isSticky = container.getAttribute('data-sticky-details') === 'true';
+        if (isSticky && window.innerWidth >= 768) {
+          el.classList.add('main-product__details--sticky');
+        }
+
+        // Re-check on resize
+        window.addEventListener('resize', function () {
+          if (isSticky && window.innerWidth >= 768) {
+            el.classList.add('main-product__details--sticky');
+          } else {
+            el.classList.remove('main-product__details--sticky');
+          }
+        });
+      });
+    }
+  };
+
+  // ============================================================
+  // Copy Link (Share)
+  // ============================================================
+  var CopyLink = {
+    init: function () {
+      var self = this;
+      var buttons = qsa('[data-copy-link]');
+
+      buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var url = window.location.href;
+          navigator.clipboard.writeText(url).then(function () {
+            var message = qs('[data-copied-message]', btn.closest('.main-product__share'));
+            if (message) {
+              message.removeAttribute('hidden');
+              setTimeout(function () {
+                message.setAttribute('hidden', '');
+              }, 2000);
+            }
+          }).catch(function () {
+            // Fallback
+            var textArea = document.createElement('textarea');
+            textArea.value = url;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+
+            var message = qs('[data-copied-message]', btn.closest('.main-product__share'));
+            if (message) {
+              message.removeAttribute('hidden');
+              setTimeout(function () {
+                message.setAttribute('hidden', '');
+              }, 2000);
+            }
+          });
+        });
+      });
+    }
+  };
+
+  // ============================================================
+  // Scroll-triggered animations (Intersection Observer)
+  // ============================================================
+  var ScrollReveal = {
+    observer: null,
+
+    init: function () {
+      if (!('IntersectionObserver' in window)) return;
+
+      var self = this;
+      this.observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-revealed');
+              self.observer.unobserve(entry.target);
+            }
+          });
+        },
+        {
+          threshold: 0.15,
+          rootMargin: '0px 0px -40px 0px'
+        }
+      );
+
+      var elements = qsa('[data-reveal]');
+      elements.forEach(function (el) {
+        self.observer.observe(el);
+      });
+    }
+  };
+
+  // ============================================================
+  // Collection Filters
+  // ============================================================
+  var CollectionFilters = {
+    container: null,
+    filtersForm: null,
+    productGrid: null,
+    sortSelect: null,
+    viewButtons: null,
+    activeFiltersContainer: null,
+    filterToggleBtn: null,
+    filterPanel: null,
+    filterOverlay: null,
+    filterCloseBtn: null,
+    loadMoreBtn: null,
+    loadMoreSpinner: null,
+    config: null,
+
+    init: function () {
+      var self = this;
+      var containers = qsa('.main-collection');
+
+      containers.forEach(function (el) {
+        self.initInstance(el);
+      });
+    },
+
+    initInstance: function (el) {
+      var self = this;
+      var configEl = qs('[data-collection-config]', el);
+      if (!configEl) return;
+
+      try {
+        this.config = JSON.parse(configEl.textContent);
+      } catch (e) {
+        console.warn('[Solaire] Could not parse collection config');
+        return;
+      }
+
+      this.container = el;
+      this.productGrid = qs('[data-product-grid]', el);
+      this.sortSelect = qs('[data-sort-select]', el);
+      this.viewButtons = qsa('[data-view]', el);
+      this.filterPanel = qs('[data-filters]', el);
+      this.filterOverlay = qs('[data-filter-overlay]', el);
+      this.filterToggleBtn = qs('[data-filter-toggle]', el);
+      this.filterCloseBtn = qs('[data-filter-close]', el);
+      this.filtersForm = qs('[data-filters-form]', el);
+      this.loadMoreBtn = qs('[data-load-more]', el);
+      this.loadMoreSpinner = qs('.main-collection__load-more-spinner', el);
+      this.activeFiltersContainer = qs('.main-collection__active-filters', el);
+
+      this.bindFilterInputs();
+      this.bindSort();
+      this.bindViewToggle();
+      this.bindMobileFilters();
+      this.bindActiveFilterPills();
+      this.bindLoadMore();
+      this.bindPriceRangeInputs();
+
+      // Restore view preference
+      this.restoreViewPreference();
+    },
+
+    // --- Filter Inputs ---
+    bindFilterInputs: function () {
+      var self = this;
+      var filterInputs = qsa('[data-filter-input]', this.filtersForm || this.container);
+
+      filterInputs.forEach(function (input) {
+        input.addEventListener('change', function () {
+          self.applyFilters();
+        });
+      });
+    },
+
+    bindPriceRangeInputs: function () {
+      var self = this;
+      var minInput = qs('[data-price-min]', this.container);
+      var maxInput = qs('[data-price-max]', this.container);
+
+      var debouncedApply = debounce(function () {
+        self.applyFilters();
+      }, 600);
+
+      if (minInput) {
+        minInput.addEventListener('input', debouncedApply);
+      }
+      if (maxInput) {
+        maxInput.addEventListener('input', debouncedApply);
+      }
+    },
+
+    // --- Apply Filters via URL ---
+    applyFilters: function () {
+      var self = this;
+      var form = this.filtersForm;
+      if (!form) return;
+
+      var params = new URLSearchParams(window.location.search);
+
+      // Remove existing filter params
+      var keysToRemove = [];
+      params.forEach(function (val, key) {
+        if (key.indexOf('filter.') === 0) {
+          keysToRemove.push(key);
+        }
+      });
+      keysToRemove.forEach(function (k) {
+        params.delete(k);
+      });
+
+      // Build new filter params from active checkboxes
+      var checkedInputs = qsa('[data-filter-input]:checked', form);
+      checkedInputs.forEach(function (input) {
+        params.append(input.name, input.value);
+      });
+
+      // Add price range filters
+      var minInput = qs('[data-price-min]', this.container);
+      var maxInput = qs('[data-price-max]', this.container);
+      if (minInput && minInput.value) {
+        // Convert dollars to cents
+        var minVal = Math.round(parseFloat(minInput.value) * 100);
+        params.set('filter.v.price.gte', minVal);
+      }
+      if (maxInput && maxInput.value) {
+        var maxVal = Math.round(parseFloat(maxInput.value) * 100);
+        params.set('filter.v.price.lte', maxVal);
+      }
+
+      // Preserve sort
+      if (this.sortSelect) {
+        params.set('sort_by', this.sortSelect.value);
+      }
+
+      // Remove page param
+      params.delete('page');
+
+      var newUrl = this.config.collectionUrl + '?' + params.toString();
+      this.fetchAndUpdate(newUrl, true);
+    },
+
+    // --- Sort ---
+    bindSort: function () {
+      var self = this;
+      if (!this.sortSelect) return;
+
+      this.sortSelect.addEventListener('change', function () {
+        var params = new URLSearchParams(window.location.search);
+        params.set('sort_by', self.sortSelect.value);
+        params.delete('page');
+
+        var newUrl = self.config.collectionUrl + '?' + params.toString();
+        self.fetchAndUpdate(newUrl, true);
+      });
+    },
+
+    // --- View Toggle ---
+    bindViewToggle: function () {
+      var self = this;
+      if (!this.viewButtons || this.viewButtons.length === 0) return;
+
+      this.viewButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var view = btn.getAttribute('data-view');
+          if (!view || btn.getAttribute('aria-checked') === 'true') return;
+
+          // Update active states
+          self.viewButtons.forEach(function (b) {
+            b.classList.remove('main-collection__view-btn--active');
+            b.setAttribute('aria-checked', 'false');
+          });
+          btn.classList.add('main-collection__view-btn--active');
+          btn.setAttribute('aria-checked', 'true');
+
+          // Update grid
+          if (self.productGrid) {
+            self.productGrid.classList.remove('main-collection__grid--view-grid', 'main-collection__grid--view-list');
+            self.productGrid.classList.add('main-collection__grid--view-' + view);
+          }
+
+          // Store preference
+          try {
+            sessionStorage.setItem('solaire_collection_view', view);
+          } catch (e) {}
+        });
+      });
+    },
+
+    restoreViewPreference: function () {
+      var preferredView = null;
+      try {
+        preferredView = sessionStorage.getItem('solaire_collection_view');
+      } catch (e) {}
+
+      if (preferredView && this.productGrid) {
+        var btn = qs('[data-view="' + preferredView + '"]', this.container);
+        if (btn) {
+          btn.click();
+        }
+      }
+    },
+
+    // --- Mobile Filter Drawer ---
+    bindMobileFilters: function () {
+      var self = this;
+
+      // Toggle button
+      if (this.filterToggleBtn && this.filterPanel) {
+        this.filterToggleBtn.addEventListener('click', function () {
+          self.openFilterDrawer();
+        });
+      }
+
+      // Close button
+      if (this.filterCloseBtn) {
+        this.filterCloseBtn.addEventListener('click', function () {
+          self.closeFilterDrawer();
+        });
+      }
+
+      // Overlay click
+      if (this.filterOverlay) {
+        this.filterOverlay.addEventListener('click', function () {
+          self.closeFilterDrawer();
+        });
+      }
+
+      // Escape key
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && self.filterPanel && self.filterPanel.classList.contains('is-open')) {
+          self.closeFilterDrawer();
+        }
+      });
+
+      // Trap focus inside filter drawer when open
+      if (this.filterPanel) {
+        trapFocus(this.filterPanel);
+      }
+    },
+
+    openFilterDrawer: function () {
+      if (this.filterPanel) {
+        this.filterPanel.classList.add('is-open');
+      }
+      if (this.filterOverlay) {
+        this.filterOverlay.classList.add('is-visible');
+      }
+      if (this.filterToggleBtn) {
+        this.filterToggleBtn.setAttribute('aria-expanded', 'true');
+      }
+      document.body.style.overflow = 'hidden';
+
+      // Focus first focusable element in drawer
+      if (this.filterPanel) {
+        var firstFocusable = qs('button, a[href], input, select', this.filterPanel);
+        if (firstFocusable) {
+          setTimeout(function () {
+            firstFocusable.focus();
+          }, 100);
+        }
+      }
+    },
+
+    closeFilterDrawer: function () {
+      if (this.filterPanel) {
+        this.filterPanel.classList.remove('is-open');
+      }
+      if (this.filterOverlay) {
+        this.filterOverlay.classList.remove('is-visible');
+      }
+      if (this.filterToggleBtn) {
+        this.filterToggleBtn.setAttribute('aria-expanded', 'false');
+      }
+      document.body.style.overflow = '';
+
+      // Return focus to toggle button
+      if (this.filterToggleBtn) {
+        this.filterToggleBtn.focus();
+      }
+    },
+
+    // --- Active Filter Pills ---
+    bindActiveFilterPills: function () {
+      var self = this;
+
+      // Delegate click on remove links
+      document.addEventListener('click', function (e) {
+        var removeLink = e.target.closest('[data-filter-remove]');
+        if (removeLink) {
+          e.preventDefault();
+          var href = removeLink.getAttribute('href');
+          if (href) {
+            self.fetchAndUpdate(href, true);
+          }
+        }
+
+        var clearLink = e.target.closest('[data-filter-clear-all]');
+        if (clearLink) {
+          e.preventDefault();
+          var clearHref = clearLink.getAttribute('href');
+          if (clearHref) {
+            self.fetchAndUpdate(clearHref, true);
+          }
+        }
+      });
+    },
+
+    // --- Load More ---
+    bindLoadMore: function () {
+      var self = this;
+      if (!this.loadMoreBtn) return;
+
+      this.loadMoreBtn.addEventListener('click', function () {
+        var currentPage = parseInt(self.loadMoreBtn.getAttribute('data-page'), 10) || 2;
+        var totalPages = parseInt(self.loadMoreBtn.getAttribute('data-total-pages'), 10) || 1;
+
+        if (currentPage > totalPages) return;
+
+        // Show spinner
+        self.loadMoreBtn.style.display = 'none';
+        if (self.loadMoreSpinner) {
+          self.loadMoreSpinner.classList.add('is-loading');
+        }
+
+        // Build URL with page param
+        var params = new URLSearchParams(window.location.search);
+        params.set('page', currentPage);
+        var loadUrl = self.config.collectionUrl + '?' + params.toString();
+
+        fetch(loadUrl)
+          .then(function (response) {
+            return response.text();
+          })
+          .then(function (html) {
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+            var newGrid = doc.querySelector('[data-product-grid]');
+
+            if (newGrid && self.productGrid) {
+              var newCards = qsa('.product-card', newGrid);
+              newCards.forEach(function (card) {
+                self.productGrid.appendChild(card);
+              });
+            }
+
+            // Update page counter
+            var nextPage = currentPage + 1;
+            self.loadMoreBtn.setAttribute('data-page', nextPage);
+
+            if (nextPage > totalPages) {
+              self.loadMoreBtn.remove();
+            }
+
+            // Update history
+            window.history.pushState({}, '', loadUrl);
+          })
+          .catch(function (err) {
+            console.error('[Solaire] Load more error:', err);
+          })
+          .finally(function () {
+            self.loadMoreBtn.style.display = '';
+            if (self.loadMoreSpinner) {
+              self.loadMoreSpinner.classList.remove('is-loading');
+            }
+          });
+      });
+    },
+
+    // --- AJAX Fetch & Update ---
+    fetchAndUpdate: function (url, pushState) {
+      var self = this;
+
+      // Show loading state
+      if (this.productGrid) {
+        this.productGrid.style.opacity = '0.5';
+        this.productGrid.style.pointerEvents = 'none';
+      }
+
+      fetch(url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(function (response) {
+          if (!response.ok) throw new Error('Network error');
+          return response.text();
+        })
+        .then(function (html) {
+          var parser = new DOMParser();
+          var doc = parser.parseFromString(html, 'text/html');
+
+          // Update product grid
+          var newGrid = doc.querySelector('[data-product-grid]');
+          if (newGrid && self.productGrid) {
+            self.productGrid.innerHTML = newGrid.innerHTML;
+          }
+
+          // Update active filter pills
+          var newFiltersBar = doc.querySelector('.main-collection__filter-bar');
+          if (newFiltersBar && self.activeFiltersContainer) {
+            var newActiveFilters = qs('.main-collection__active-filters', newFiltersBar);
+            var currentContainer = self.activeFiltersContainer;
+
+            if (newActiveFilters) {
+              currentContainer.innerHTML = newActiveFilters.innerHTML;
+            } else {
+              currentContainer.innerHTML = '';
+            }
+          }
+
+          // Update filter count badge
+          var newFilterToggle = doc.querySelector('[data-filter-toggle]');
+          var currentToggle = self.filterToggleBtn;
+          if (newFilterToggle && currentToggle) {
+            var newCount = qs('.main-collection__filter-count', newFilterToggle);
+            var currentCountSpan = qs('.main-collection__filter-count', currentToggle);
+
+            if (newCount) {
+              if (currentCountSpan) {
+                currentCountSpan.textContent = newCount.textContent;
+              } else {
+                var countEl = document.createElement('span');
+                countEl.className = 'main-collection__filter-count';
+                countEl.textContent = newCount.textContent;
+                currentToggle.appendChild(countEl);
+              }
+            } else if (currentCountSpan) {
+              currentCountSpan.remove();
+            }
+
+            // Update aria-expanded
+            currentToggle.setAttribute('aria-expanded', newFilterToggle.getAttribute('aria-expanded') || 'false');
+          }
+
+          // Update product count
+          var newCountEl = doc.querySelector('.main-collection__product-count');
+          var currentCountEl = qs('.main-collection__product-count', self.container);
+          if (newCountEl && currentCountEl) {
+            currentCountEl.textContent = newCountEl.textContent;
+          }
+
+          // Update load more button
+          var newLoadMore = doc.querySelector('[data-load-more]');
+          if (self.loadMoreBtn && newLoadMore) {
+            self.loadMoreBtn.setAttribute('data-page', newLoadMore.getAttribute('data-page'));
+            self.loadMoreBtn.setAttribute('data-total-pages', newLoadMore.getAttribute('data-total-pages'));
+            self.loadMoreBtn.style.display = '';
+          } else if (self.loadMoreBtn && !newLoadMore) {
+            self.loadMoreBtn.remove();
+            self.loadMoreBtn = null;
+          }
+
+          // Update pagination
+          var newPagination = doc.querySelector('.pagination');
+          var currentPagination = qs('.pagination', self.container);
+          if (newPagination && currentPagination) {
+            currentPagination.innerHTML = newPagination.innerHTML;
+          } else if (currentPagination) {
+            currentPagination.remove();
+          }
+
+          // Update URL
+          if (pushState !== false) {
+            window.history.pushState({}, '', url);
+          }
+
+          // Close mobile drawer after filter application
+          self.closeFilterDrawer();
+
+          // Scroll to toolbar on mobile
+          if (window.innerWidth < 1024) {
+            var toolbar = qs('.main-collection__toolbar', self.container);
+            if (toolbar) {
+              toolbar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }
+        })
+        .catch(function (err) {
+          console.error('[Solaire] Filter AJAX error:', err);
+        })
+        .finally(function () {
+          if (self.productGrid) {
+            self.productGrid.style.opacity = '';
+            self.productGrid.style.pointerEvents = '';
+          }
+        });
+    }
+  };
+
+  // ============================================================
+  // Back to Top Button
+  // ============================================================
+  var BackToTop = {
+    button: null,
+    threshold: 400,
+
+    init: function () {
+      this.button = qs('[data-back-to-top]');
+      if (!this.button) return;
+
+      var self = this;
+      window.addEventListener(
+        'scroll',
+        debounce(function () {
+          if (window.scrollY > self.threshold) {
+            self.button.classList.add('is-visible');
+          } else {
+            self.button.classList.remove('is-visible');
+          }
+        }, 100)
+      );
+
+      this.button.addEventListener('click', function () {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Set focus to main content after scrolling
+        var mainContent = document.getElementById('MainContent');
+        if (mainContent) {
+          setTimeout(function () {
+            mainContent.focus({ preventScroll: true });
+          }, 600);
+        }
+      });
+    }
+  };
+
+  // ============================================================
+  // Focus Return on Drawer Close
+  // ============================================================
+  var FocusReturn = {
+    init: function () {
+      // Cart drawer close — return focus
+      document.addEventListener('click', function (e) {
+        var closeBtn = e.target.closest('[data-cart-close]');
+        if (closeBtn) {
+          var cartToggle = qs('[data-cart-toggle]');
+          if (cartToggle) {
+            setTimeout(function () { cartToggle.focus(); }, 100);
+          }
+        }
+
+        var mobileNavClose = e.target.closest('[data-mobile-nav-close]');
+        if (mobileNavClose) {
+          var navToggle = qs('[data-mobile-nav-toggle]');
+          if (navToggle) {
+            setTimeout(function () { navToggle.focus(); }, 100);
+          }
+        }
+
+        var searchClose = e.target.closest('[data-search-close]');
+        if (searchClose) {
+          var searchToggle = qs('[data-search-toggle]');
+          if (searchToggle) {
+            setTimeout(function () { searchToggle.focus(); }, 100);
+          }
+        }
+      });
+    }
+  };
+
+  // ============================================================
   // Initialize Everything on DOM Ready
   // ============================================================
   function init() {
@@ -435,12 +2007,29 @@
     StickyHeader.init();
     AnnouncementBar.init();
     ShopifySections.init();
+    HeroCarousel.init();
+    ScrollReveal.init();
+    ProductGallery.init();
+    ImageZoom.init();
+    QuantitySelector.init();
+    ProductAccordions.init();
+    AddToCart.init();
+    StickyDetails.init();
+    CopyLink.init();
+    CollectionFilters.init();
+    BackToTop.init();
+    FocusReturn.init();
 
     // Expose for external use
     window.SOLAIRE = SOLAIRE;
-    SOLAIRE.cartDrawer = CartDrawer;
+    window.Solaire = SOLAIRE;
+    SOLAIRE.CartDrawer = CartDrawer;
     SOLAIRE.mobileNav = MobileNav;
     SOLAIRE.searchOverlay = SearchOverlay;
+    SOLAIRE.heroCarousel = HeroCarousel;
+    SOLAIRE.productGallery = ProductGallery;
+    SOLAIRE.imageZoom = ImageZoom;
+    SOLAIRE.collectionFilters = CollectionFilters;
   }
 
   if (document.readyState === 'loading') {
