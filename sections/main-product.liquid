@@ -48,9 +48,10 @@
         {%- comment -%} Primary Image with Zoom {%- endcomment -%}
         <div class="main-product__primary-media" data-primary-media>
           {%- if enable_zoom -%}
+            {%- assign zoom_id = 'ProductZoom-' | append: section.id -%}
             {%- render 'image-zoom',
               image: featured_media.preview_image,
-              zoom_id: 'ProductZoom-' | append: section.id,
+              zoom_id: zoom_id,
               zoom_enabled: enable_zoom
             -%}
           {%- else -%}
@@ -203,7 +204,7 @@
                   <p class="main-product__option-name">
                     {{ option.name | escape }}:
                     <span class="main-product__option-value" data-option-label="{{ option.position }}">
-                      {{- current_variant.options[option.position | minus: 1] -}}
+                      {{- current_variant.options[forloop.index0] -}}
                     </span>
                   </p>
                   {%- render 'variant-swatches',
