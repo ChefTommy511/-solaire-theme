@@ -5,7 +5,7 @@
 
 {%- liquid
   assign heading = section.settings.heading | default: 'Page not found'
-  assign subtext = section.settings.subtext | default: 'The page you\'re looking for doesn\'t exist or has been moved.'
+  assign subtext = section.settings.subtext | default: "The page you're looking for doesn't exist or has been moved."
   assign button_text = section.settings.button_text | default: 'Continue shopping'
   assign show_search = section.settings.show_search | default: true
   assign show_collections = section.settings.show_collections | default: true

@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "name": "theme_info",
+    "theme_name": "Solaire",
+    "theme_version": "1.0.0",
+    "theme_author": "Solaire Themes",
+    "theme_documentation_url": "https://3465cbb202d53b16336dade173e58ec2.ctonew.app/",
+    "theme_support_url": "https://3465cbb202d53b16336dade173e58ec2.ctonew.app/"
+  }
+]

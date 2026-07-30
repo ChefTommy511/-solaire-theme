@@ -8,11 +8,11 @@
 
 {%- liquid
   assign product = product | default: nil
-  if product == nil
-    render 'missing-product'
-    return
-  endif
-
+-%}
+{%- if product == nil -%}
+  {%- render 'missing-product' -%}
+{%- else -%}
+{%- liquid
   assign current_variant = product.selected_or_first_available_variant
   assign featured_media = current_variant.featured_media | default: product.featured_media
   assign product_media = product.media
@@ -26,6 +26,8 @@
   assign sticky_details = section.settings.sticky_details | default: true
 
   assign form_id = 'product-form-' | append: section.id
+
+  assign featured_media_alt = featured_media.alt | default: product.title | escape
 -%}
 
 <div
@@ -61,7 +63,7 @@
                 image: featured_media.preview_image,
                 sizes: '(min-width: 1024px) 60vw, 100vw',
                 class: 'main-product__featured-image',
-                alt: featured_media.alt | default: product.title | escape,
+                alt: featured_media_alt,
                 loading: 'eager',
                 fetchpriority: 'high'
               -%}
@@ -114,11 +116,12 @@
                         </svg>
                       </span>
                     {%- endif -%}
+                    {%- assign thumbnail_alt = media.alt | default: product.title | append: ' - ' | append: forloop.index | escape -%}
                     {%- render 'lazy-image',
                       image: media.preview_image,
                       sizes: '80px',
                       class: 'main-product__thumbnail-img',
-                      alt: media.alt | default: product.title | append: ' - ' | append: forloop.index | escape
+                      alt: thumbnail_alt
                     -%}
                   </span>
                 </button>
@@ -561,6 +564,8 @@
     </div>{# /.main-product__details #}
   </div>{# /.main-product__wrapper #}
 </div>{# /.main-product #}
+
+{%- endif -%}
 
 {%- comment -%}
   ============================================

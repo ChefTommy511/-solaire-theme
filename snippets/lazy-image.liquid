@@ -5,10 +5,9 @@
 
 {%- liquid
   assign image = image | default: nil
-  if image == nil
-    return
-  endif
-
+-%}
+{%- if image != nil -%}
+{%- liquid
   assign alt = alt | default: image.alt | default: ''
   assign class = class | default: ''
   assign sizes = sizes | default: '100vw'
@@ -43,4 +42,5 @@
       height="{{ image.height }}"
     >
   </noscript>
+{%- endif -%}
 {%- endif -%}

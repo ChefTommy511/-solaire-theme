@@ -6,10 +6,9 @@
 
 {%- liquid
   assign product = product | default: nil
-  if product == nil
-    return
-  endif
-
+-%}
+{%- if product != nil -%}
+{%- liquid
   assign frame_width = product.metafields.solaire.frame_width | default: section.settings.size_guide_frame_width | default: '140'
   assign lens_width = product.metafields.solaire.lens_width | default: section.settings.size_guide_lens_width | default: '55'
   assign bridge_width = product.metafields.solaire.bridge_width | default: section.settings.size_guide_bridge_width | default: '18'
@@ -60,3 +59,4 @@
     {{ 'products.product.measurements_disclaimer' | t }}
   </p>
 </div>
+{%- endif -%}

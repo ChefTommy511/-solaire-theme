@@ -19,6 +19,8 @@
   if banner_image != blank
     assign has_image = true
   endif
+
+  assign collection_title_escaped = collection.title | escape
 -%}
 
 <div
@@ -29,7 +31,7 @@
     <div class="collection-banner__media">
       {%- render 'lazy-image',
         image: banner_image,
-        alt: collection.title | escape,
+        alt: collection_title_escaped,
         class: 'collection-banner__image',
         sizes: '100vw',
         widths: '375, 550, 750, 1100, 1500, 1780, 2000, 2400, 3000'

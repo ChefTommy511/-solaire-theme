@@ -41,6 +41,8 @@
           assign overlay_opacity = block.settings.overlay_opacity | default: 30
           assign overlay_color = block.settings.overlay_color | default: '#000000'
           assign index = forloop.index0
+
+          assign slide_image_alt = slide_image.alt | default: slide_heading | default: 'Hero slide ' | append: forloop.index
         -%}
         <div
           class="hero-banner__slide{% if forloop.first %} hero-banner__slide--active{% endif %}"
@@ -57,7 +59,7 @@
                 image: slide_image,
                 sizes: '100vw',
                 class: 'hero-banner__image hero-banner__image--desktop',
-                alt: slide_image.alt | default: slide_heading | default: 'Hero slide ' | append: forloop.index,
+                alt: slide_image_alt,
                 fetchpriority: 'high'
               -%}
               {%- if slide_image_mobile != blank -%}
@@ -65,7 +67,7 @@
                   image: slide_image_mobile,
                   sizes: '100vw',
                   class: 'hero-banner__image hero-banner__image--mobile',
-                  alt: slide_image_mobile.alt | default: slide_heading | default: 'Hero slide ' | append: forloop.index,
+                  alt: slide_image_alt,
                   fetchpriority: 'high'
                 -%}
               {%- endif -%}

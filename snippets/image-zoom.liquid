@@ -8,11 +8,13 @@
 
 {%- liquid
   assign image = image | default: nil
-  if image == nil
-    return
-  endif
+-%}
+{%- if image != nil -%}
+{%- liquid
   assign zoom_id = zoom_id | default: 'ProductZoom-' | append: section.id
   assign zoom_enabled = zoom_enabled | default: true
+
+  assign zoom_image_alt = image.alt | default: product.title | escape
 -%}
 
 {%- if image != blank and zoom_enabled -%}
@@ -21,22 +23,23 @@
     id="{{ zoom_id }}"
     data-zoom-enabled="true"
     role="img"
-    aria-label="{{ image.alt | default: product.title | escape }}"
+    aria-label="{{ zoom_image_alt }}"
   >
     {%- render 'lazy-image',
       image: image,
       sizes: '(min-width: 1024px) 60vw, 100vw',
       class: 'image-zoom__main',
-      alt: image.alt | default: product.title | escape
+      alt: zoom_image_alt
     -%}
 
     <div class="image-zoom__lens" aria-hidden="true">
       <img
         src="{{ image | image_url: width: 1500 }}"
-        alt="{{ image.alt | default: product.title | escape }}"
+        alt="{{ zoom_image_alt }}"
         class="image-zoom__lens-image"
         loading="lazy"
       >
     </div>
   </div>
+{%- endif -%}
 {%- endif -%}

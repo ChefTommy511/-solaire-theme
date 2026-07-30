@@ -7,10 +7,9 @@
 
 {%- liquid
   assign product = product | default: nil
-  if product == nil
-    return
-  endif
-
+-%}
+{%- if product != nil -%}
+{%- liquid
   assign context = context | default: 'card'
   assign option_name = option_name | default: nil
   assign current_value = current_value | default: nil
@@ -24,11 +23,9 @@
       assign active_option = swatch_options | first
     endif
   endif
-
-  if active_option == nil
-    return
-  endif
-
+-%}
+{%- if active_option != nil -%}
+{%- liquid
   assign swatch_count = active_option.values.size
   assign max_display = 4
   assign option_index = 'option' | append: active_option.position
@@ -126,4 +123,6 @@
       </span>
     {%- endif -%}
   </fieldset>
+{%- endif -%}
+{%- endif -%}
 {%- endif -%}

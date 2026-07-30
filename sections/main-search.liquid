@@ -9,8 +9,13 @@
   assign columns_mobile = section.settings.columns_mobile | default: 2
   assign show_suggestions = section.settings.show_suggestions | default: true
   assign search_terms = search.terms | escape
-  assign has_results = search.results.size > 0
 -%}
+
+{%- if search.results.size > 0 -%}
+  {%- assign has_results = true -%}
+{%- else -%}
+  {%- assign has_results = false -%}
+{%- endif -%}
 
 {%- style -%}
   .main-search__grid {

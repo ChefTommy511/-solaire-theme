@@ -5,11 +5,8 @@
 
 {%- liquid
   assign paginate = paginate | default: nil
-  if paginate == nil or paginate.pages < 2
-    return
-  endif
 -%}
-
+{%- if paginate != nil and paginate.pages >= 2 -%}
 <nav class="pagination" role="navigation" aria-label="{{ 'general.pagination.label' | t }}">
   {%- if paginate.previous -%}
     <a href="{{ paginate.previous.url }}" class="pagination__item pagination__item--prev" aria-label="{{ 'general.pagination.previous' | t }}">
@@ -45,3 +42,4 @@
     </span>
   {%- endif -%}
 </nav>
+{%- endif -%}
