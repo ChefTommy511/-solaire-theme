@@ -152,7 +152,8 @@
     {%- section 'footer' -%}
 
     {%- if settings.cart_type == 'drawer' -%}
-      <div id="CartDrawer" class="cart-drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-label="{{ 'cart.general.title' | t }}">
+      {%- assign free_shipping_threshold = settings.cart_free_shipping_threshold | default: 10000 -%}
+      <div id="CartDrawer" class="cart-drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-label="{{ 'cart.general.title' | t }}" data-free-shipping-threshold="{{ free_shipping_threshold }}">
         <div class="cart-drawer__overlay" data-cart-close></div>
         <div class="cart-drawer__inner">
           <div class="cart-drawer__header">

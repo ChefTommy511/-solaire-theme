@@ -1,10 +1,26 @@
 {
   "sections": {
-    "main": {
+    "announcement-bar": {
+      "type": "announcement-bar"
+    },
+    "header": {
+      "type": "header"
+    },
+    "main-cart": {
       "type": "main-cart"
+    },
+    "newsletter": {
+      "type": "newsletter"
+    },
+    "footer": {
+      "type": "footer"
     }
   },
   "order": [
-    "main"
+    "announcement-bar",
+    "header",
+    "main-cart",
+    "newsletter",
+    "footer"
   ]
 }
