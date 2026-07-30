@@ -1,115 +1,180 @@
 {%- comment -%}
   Solaire Theme — Hero Banner Section
-  Full-width hero with text overlay, perfect for showcasing sunglasses collections.
+  Multi-slide full-width hero carousel with crossfade transitions.
+  Block-based: each slide is a block with configurable image, text overlay, and CTA.
 {%- endcomment -%}
 
-<section class="hero-banner" data-section-id="{{ section.id }}">
-  <div class="hero-banner__wrapper">
-    {%- if section.settings.image != blank -%}
-      <div class="hero-banner__media">
-        {%- render 'lazy-image',
-          image: section.settings.image,
-          sizes: '100vw',
-          class: 'hero-banner__image'
+{%- liquid
+  assign section_height = section.settings.section_height | default: 'large'
+  assign autoplay = section.settings.autoplay
+  assign autoplay_speed = section.settings.autoplay_speed | default: 5
+  assign transition = section.settings.transition | default: 'crossfade'
+  assign blocks = section.blocks | where: 'type', 'slide'
+  assign slide_count = blocks.size
+  if slide_count == 0
+    assign slide_count = 1
+  endif
+-%}
+
+<section
+  class="hero-banner hero-banner--{{ section_height }}{% if slide_count > 1 %} hero-banner--carousel{% endif %}"
+  data-section-id="{{ section.id }}"
+  data-autoplay="{{ autoplay }}"
+  data-autoplay-speed="{{ autoplay_speed | times: 1000 }}"
+  data-transition="{{ transition }}"
+  aria-label="{{ 'sections.hero-banner.label' | t }}"
+  role="region"
+  {% if autoplay %}aria-roledescription="{{ 'sections.hero-banner.carousel' | t }}"{% endif %}
+>
+  <div class="hero-banner__slides" aria-live="{% if autoplay and slide_count > 1 %}polite{% else %}off{% endif %}">
+    {%- if slide_count > 0 -%}
+      {%- for block in blocks -%}
+        {%- liquid
+          assign slide_image = block.settings.image
+          assign slide_image_mobile = block.settings.mobile_image | default: slide_image
+          assign slide_heading = block.settings.heading
+          assign slide_subheading = block.settings.subheading
+          assign slide_button_text = block.settings.button_text
+          assign slide_button_link = block.settings.button_link | default: '#'
+          assign text_alignment = block.settings.text_alignment | default: 'center'
+          assign vertical_alignment = block.settings.vertical_alignment | default: 'middle'
+          assign overlay_opacity = block.settings.overlay_opacity | default: 30
+          assign overlay_color = block.settings.overlay_color | default: '#000000'
+          assign index = forloop.index0
+
+          assign slide_image_alt = slide_image.alt | default: slide_heading | default: 'Hero slide ' | append: forloop.index
         -%}
-      </div>
+        <div
+          class="hero-banner__slide{% if forloop.first %} hero-banner__slide--active{% endif %}"
+          data-slide-index="{{ index }}"
+          role="group"
+          aria-roledescription="slide"
+          aria-label="{{ 'sections.hero-banner.slide_label' | t: number: forloop.index, total: slide_count }}"
+          {% if forloop.first %}aria-hidden="false"{% else %}aria-hidden="true"{% endif %}
+          {{ block.shopify_attributes }}
+        >
+          <div class="hero-banner__media">
+            {%- if slide_image != blank -%}
+              {%- render 'lazy-image',
+                image: slide_image,
+                sizes: '100vw',
+                class: 'hero-banner__image hero-banner__image--desktop',
+                alt: slide_image_alt,
+                fetchpriority: 'high'
+              -%}
+              {%- if slide_image_mobile != blank -%}
+                {%- render 'lazy-image',
+                  image: slide_image_mobile,
+                  sizes: '100vw',
+                  class: 'hero-banner__image hero-banner__image--mobile',
+                  alt: slide_image_alt,
+                  fetchpriority: 'high'
+                -%}
+              {%- endif -%}
+            {%- else -%}
+              <div class="hero-banner__placeholder">
+                {{ 'lifestyle-1' | placeholder_svg_tag: 'hero-banner__placeholder-svg' }}
+              </div>
+            {%- endif -%}
+          </div>
+
+          <div
+            class="hero-banner__overlay"
+            style="--overlay-opacity: {{ overlay_opacity | divided_by: 100.0 }}; --overlay-color: {{ overlay_color }};"
+            aria-hidden="true"
+          ></div>
+
+          <div class="hero-banner__content hero-banner__content--{{ text_alignment }} hero-banner__content--vertical-{{ vertical_alignment }}">
+            <div class="hero-banner__text page-width">
+              {%- if slide_heading != blank -%}
+                <h2 class="hero-banner__heading">{{ slide_heading | escape }}</h2>
+              {%- endif -%}
+              {%- if slide_subheading != blank -%}
+                <p class="hero-banner__subheading">{{ slide_subheading | escape }}</p>
+              {%- endif -%}
+              {%- if slide_button_text != blank -%}
+                <a
+                  href="{{ slide_button_link }}"
+                  class="btn btn--accent hero-banner__cta"
+                  {% if slide_button_link contains '#' %}aria-current="false"{% endif %}
+                >
+                  {{ slide_button_text | escape }}
+                </a>
+              {%- endif -%}
+            </div>
+          </div>
+        </div>
+      {%- endfor -%}
     {%- else -%}
-      <div class="hero-banner__placeholder">
-        {{ 'lifestyle-1' | placeholder_svg_tag: 'hero-banner__placeholder-svg' }}
+      {%- comment -%} No blocks: render default placeholder slide {%- endcomment -%}
+      <div class="hero-banner__slide hero-banner__slide--active" data-slide-index="0" role="group" aria-roledescription="slide" aria-hidden="false">
+        <div class="hero-banner__media">
+          <div class="hero-banner__placeholder">
+            {{ 'lifestyle-1' | placeholder_svg_tag: 'hero-banner__placeholder-svg' }}
+          </div>
+        </div>
+        <div class="hero-banner__overlay" style="--overlay-opacity: 0.2; --overlay-color: #000000;" aria-hidden="true"></div>
+        <div class="hero-banner__content hero-banner__content--center hero-banner__content--vertical-middle">
+          <div class="hero-banner__text page-width">
+            <h2 class="hero-banner__heading">{{ 'sections.hero-banner.default_heading' | t }}</h2>
+            <p class="hero-banner__subheading">{{ 'sections.hero-banner.default_subheading' | t }}</p>
+            <a href="#" class="btn btn--accent hero-banner__cta">{{ 'sections.hero-banner.default_cta' | t }}</a>
+          </div>
+        </div>
       </div>
     {%- endif -%}
-
-    <div class="hero-banner__content hero-banner__content--{{ section.settings.content_position }}">
-      <div class="hero-banner__text page-width">
-        {%- if section.settings.heading != blank -%}
-          <h1 class="hero-banner__heading">{{ section.settings.heading | escape }}</h1>
-        {%- endif -%}
-        {%- if section.settings.subheading != blank -%}
-          <p class="hero-banner__subheading">{{ section.settings.subheading | escape }}</p>
-        {%- endif -%}
-        {%- if section.settings.button_text != blank -%}
-          <a
-            href="{{ section.settings.button_link | default: '#' }}"
-            class="btn btn--{{ section.settings.button_style }}"
-          >
-            {{ section.settings.button_text | escape }}
-          </a>
-        {%- endif -%}
-      </div>
-    </div>
   </div>
+
+  {%- if slide_count > 1 -%}
+    <button
+      type="button"
+      class="hero-banner__arrow hero-banner__arrow--prev"
+      data-hero-prev
+      aria-label="{{ 'sections.hero-banner.previous_slide' | t }}"
+    >
+      {%- render 'icon-arrow-left' -%}
+    </button>
+    <button
+      type="button"
+      class="hero-banner__arrow hero-banner__arrow--next"
+      data-hero-next
+      aria-label="{{ 'sections.hero-banner.next_slide' | t }}"
+    >
+      {%- render 'icon-arrow-right' -%}
+    </button>
+
+    <div class="hero-banner__dots" role="tablist" aria-label="{{ 'sections.hero-banner.slide_navigation' | t }}">
+      {%- for block in blocks -%}
+        <button
+          type="button"
+          class="hero-banner__dot{% if forloop.first %} hero-banner__dot--active{% endif %}"
+          role="tab"
+          aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+          aria-label="{{ 'sections.hero-banner.go_to_slide' | t: number: forloop.index }}"
+          data-slide-to="{{ forloop.index0 }}"
+        ></button>
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+
+  {%- if slide_count > 1 and autoplay -%}
+    <button
+      type="button"
+      class="hero-banner__pause"
+      data-hero-pause
+      aria-label="{{ 'sections.hero-banner.pause' | t }}"
+    >
+      <span class="hero-banner__pause-icon" aria-hidden="true">❚❚</span>
+    </button>
+  {%- endif -%}
 </section>
 
 {% schema %}
 {
   "name": "t:sections.hero-banner.name",
   "class": "section-hero-banner",
+  "max_blocks": 5,
   "settings": [
-    {
-      "type": "image_picker",
-      "id": "image",
-      "label": "t:sections.hero-banner.settings.image.label"
-    },
-    {
-      "type": "image_picker",
-      "id": "mobile_image",
-      "label": "t:sections.hero-banner.settings.mobile_image.label"
-    },
-    {
-      "type": "text",
-      "id": "heading",
-      "label": "t:sections.hero-banner.settings.heading.label",
-      "default": "Elevate your look"
-    },
-    {
-      "type": "text",
-      "id": "subheading",
-      "label": "t:sections.hero-banner.settings.subheading.label",
-      "default": "Premium eyewear designed for those who see differently"
-    },
-    {
-      "type": "text",
-      "id": "button_text",
-      "label": "t:sections.hero-banner.settings.button_text.label",
-      "default": "Shop collection"
-    },
-    {
-      "type": "url",
-      "id": "button_link",
-      "label": "t:sections.hero-banner.settings.button_link.label"
-    },
-    {
-      "type": "select",
-      "id": "button_style",
-      "label": "t:sections.hero-banner.settings.button_style.label",
-      "options": [
-        { "value": "primary", "label": "t:sections.hero-banner.settings.button_style.options.primary" },
-        { "value": "accent", "label": "t:sections.hero-banner.settings.button_style.options.accent" },
-        { "value": "outline", "label": "t:sections.hero-banner.settings.button_style.options.outline" }
-      ],
-      "default": "primary"
-    },
-    {
-      "type": "select",
-      "id": "content_position",
-      "label": "t:sections.hero-banner.settings.content_position.label",
-      "options": [
-        { "value": "center", "label": "t:sections.hero-banner.settings.content_position.options.center" },
-        { "value": "left", "label": "t:sections.hero-banner.settings.content_position.options.left" },
-        { "value": "right", "label": "t:sections.hero-banner.settings.content_position.options.right" }
-      ],
-      "default": "center"
-    },
-    {
-      "type": "range",
-      "id": "overlay_opacity",
-      "label": "t:sections.hero-banner.settings.overlay_opacity.label",
-      "min": 0,
-      "max": 100,
-      "step": 5,
-      "unit": "%",
-      "default": 20
-    },
     {
       "type": "select",
       "id": "section_height",
@@ -121,12 +186,123 @@
         { "value": "fullscreen", "label": "t:sections.hero-banner.settings.section_height.options.fullscreen" }
       ],
       "default": "large"
+    },
+    {
+      "type": "checkbox",
+      "id": "autoplay",
+      "label": "t:sections.hero-banner.settings.autoplay.label",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "autoplay_speed",
+      "label": "t:sections.hero-banner.settings.autoplay_speed.label",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "default": 5
+    },
+    {
+      "type": "select",
+      "id": "transition",
+      "label": "t:sections.hero-banner.settings.transition.label",
+      "options": [
+        { "value": "crossfade", "label": "t:sections.hero-banner.settings.transition.options.crossfade" },
+        { "value": "slide", "label": "t:sections.hero-banner.settings.transition.options.slide" }
+      ],
+      "default": "crossfade"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "t:sections.hero-banner.blocks.slide.name",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:sections.hero-banner.blocks.slide.settings.image.label"
+        },
+        {
+          "type": "image_picker",
+          "id": "mobile_image",
+          "label": "t:sections.hero-banner.blocks.slide.settings.mobile_image.label",
+          "info": "t:sections.hero-banner.blocks.slide.settings.mobile_image.info"
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "t:sections.hero-banner.blocks.slide.settings.heading.label",
+          "default": "Elevate your look"
+        },
+        {
+          "type": "text",
+          "id": "subheading",
+          "label": "t:sections.hero-banner.blocks.slide.settings.subheading.label",
+          "default": "Premium eyewear designed for those who see differently"
+        },
+        {
+          "type": "text",
+          "id": "button_text",
+          "label": "t:sections.hero-banner.blocks.slide.settings.button_text.label",
+          "default": "Shop collection"
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "t:sections.hero-banner.blocks.slide.settings.button_link.label"
+        },
+        {
+          "type": "select",
+          "id": "text_alignment",
+          "label": "t:sections.hero-banner.blocks.slide.settings.text_alignment.label",
+          "options": [
+            { "value": "left", "label": "t:sections.hero-banner.blocks.slide.settings.text_alignment.options.left" },
+            { "value": "center", "label": "t:sections.hero-banner.blocks.slide.settings.text_alignment.options.center" },
+            { "value": "right", "label": "t:sections.hero-banner.blocks.slide.settings.text_alignment.options.right" }
+          ],
+          "default": "center"
+        },
+        {
+          "type": "select",
+          "id": "vertical_alignment",
+          "label": "t:sections.hero-banner.blocks.slide.settings.vertical_alignment.label",
+          "options": [
+            { "value": "top", "label": "t:sections.hero-banner.blocks.slide.settings.vertical_alignment.options.top" },
+            { "value": "middle", "label": "t:sections.hero-banner.blocks.slide.settings.vertical_alignment.options.middle" },
+            { "value": "bottom", "label": "t:sections.hero-banner.blocks.slide.settings.vertical_alignment.options.bottom" }
+          ],
+          "default": "middle"
+        },
+        {
+          "type": "range",
+          "id": "overlay_opacity",
+          "label": "t:sections.hero-banner.blocks.slide.settings.overlay_opacity.label",
+          "min": 0,
+          "max": 80,
+          "step": 5,
+          "unit": "%",
+          "default": 30
+        },
+        {
+          "type": "color",
+          "id": "overlay_color",
+          "label": "t:sections.hero-banner.blocks.slide.settings.overlay_color.label",
+          "default": "#000000"
+        }
+      ]
     }
   ],
   "presets": [
     {
       "name": "t:sections.hero-banner.presets.name",
-      "category": "Hero"
+      "category": "Hero",
+      "blocks": [
+        {
+          "type": "slide"
+        }
+      ]
     }
   ]
 }

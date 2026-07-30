@@ -1,19 +1,28 @@
 {%- comment -%}
   Solaire Theme — Header Section
-  Premium header with logo, navigation, icons, and mobile menu support.
+  Premium header with logo, navigation, dropdowns, search and cart icons, mobile menu.
 {%- endcomment -%}
 
 {%- liquid
-  assign logo_position = settings.logo_position | default: 'center'
-  assign menu_style = settings.menu_style | default: 'horizontal'
-  assign enable_sticky = settings.enable_sticky_header
-  assign sticky_style = settings.sticky_header_style | default: 'on_scroll_up'
-  assign transparent = settings.enable_transparent_header
-  assign header_padding = settings.header_padding | default: 'standard'
+  assign logo_position = section.settings.logo_position | default: 'center'
+  assign enable_sticky = section.settings.enable_sticky
+  assign sticky_style = section.settings.sticky_style | default: 'on_scroll_up'
+  assign show_search = section.settings.show_search | default: true
+  assign show_cart = section.settings.show_cart | default: true
+  assign show_account = section.settings.show_account | default: false
+  assign logo_width = section.settings.logo_width | default: 140
+  assign main_menu = section.settings.main_menu | default: 'main-menu'
+  assign secondary_menu = section.settings.secondary_menu
 -%}
 
+{%- style -%}
+  .site-header {
+    --logo-width: {{ logo_width }}px;
+  }
+{%- endstyle -%}
+
 <header
-  class="site-header{% if enable_sticky %} site-header--sticky{% endif %}{% if transparent %} site-header--transparent{% endif %}"
+  class="site-header{% if enable_sticky %} site-header--sticky{% endif %}"
   data-header
   data-sticky-style="{{ sticky_style }}"
   role="banner"
@@ -32,55 +41,59 @@
       {%- render 'icon-menu' -%}
     </button>
 
-    {%- comment -%} Logo {%- endcomment -%}
+    {%- comment -%} Logo — left on desktop if position=left {%- endcomment -%}
     <div class="site-header__logo">
       <a href="{{ routes.root_url }}" class="site-header__logo-link" aria-label="{{ shop.name }}">
-        {%- if settings.logo != blank -%}
+        {%- if section.settings.logo_image != blank -%}
           <img
-            src="{{ settings.logo | image_url: width: 300 }}"
+            src="{{ section.settings.logo_image | image_url: width: 400 }}"
             alt="{{ shop.name | escape }}"
-            width="{{ settings.logo_width }}"
-            height="{{ settings.logo_width | divided_by: settings.logo.aspect_ratio | round }}"
+            width="{{ logo_width }}"
+            height="{{ logo_width | divided_by: section.settings.logo_image.aspect_ratio | round }}"
             class="site-header__logo-img"
             loading="eager"
           >
         {%- else -%}
-          <span class="site-header__logo-text site-header__logo-text--{{ logo_position }}">
-            {{ shop.name }}
-          </span>
+          <span class="site-header__logo-text">{{ shop.name }}</span>
         {%- endif -%}
       </a>
     </div>
 
     {%- comment -%} Desktop navigation {%- endcomment -%}
-    {%- if menu_style == 'horizontal' -%}
-      <nav class="site-header__nav" aria-label="{{ 'general.accessibility.main_nav' | t }}">
-        <ul class="site-header__nav-list" role="list">
-          {%- for link in linklists.main-menu.links -%}
-            <li class="site-header__nav-item{% if link.links != blank %} site-header__nav-item--has-dropdown{% endif %}">
-              <a href="{{ link.url }}" class="site-header__nav-link"{% if link.active %} aria-current="page"{% endif %}>
-                {{ link.title | escape }}
-              </a>
-              {%- if link.links != blank -%}
-                <ul class="site-header__dropdown" role="list">
-                  {%- for child_link in link.links -%}
-                    <li class="site-header__dropdown-item">
-                      <a href="{{ child_link.url }}" class="site-header__dropdown-link"{% if child_link.active %} aria-current="page"{% endif %}>
-                        {{ child_link.title | escape }}
-                      </a>
-                    </li>
-                  {%- endfor -%}
-                </ul>
-              {%- endif -%}
-            </li>
-          {%- endfor -%}
-        </ul>
-      </nav>
-    {%- endif -%}
+    <nav class="site-header__nav" aria-label="{{ 'general.accessibility.main_nav' | t }}">
+      <ul class="site-header__nav-list" role="list">
+        {%- for link in linklists[main_menu].links -%}
+          <li class="site-header__nav-item{% if link.links != blank %} site-header__nav-item--has-dropdown{% endif %}">
+            <a
+              href="{{ link.url }}"
+              class="site-header__nav-link"
+              {% if link.active %} aria-current="page"{% endif %}
+              {% if link.links != blank %} aria-haspopup="true" aria-expanded="false"{% endif %}
+            >
+              {{ link.title | escape }}
+            </a>
+            {%- if link.links != blank -%}
+              <div class="site-header__dropdown" role="menu">
+                {%- for child_link in link.links -%}
+                  <a
+                    href="{{ child_link.url }}"
+                    class="site-header__dropdown-link"
+                    role="menuitem"
+                    {% if child_link.active %} aria-current="page"{% endif %}
+                  >
+                    {{ child_link.title | escape }}
+                  </a>
+                {%- endfor -%}
+              </div>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    </nav>
 
     {%- comment -%} Header icons {%- endcomment -%}
     <div class="site-header__icons">
-      {%- if settings.show_search -%}
+      {%- if show_search -%}
         <button
           type="button"
           class="site-header__icon site-header__icon--search"
@@ -93,35 +106,181 @@
         </button>
       {%- endif -%}
 
-      {%- if settings.show_account_icon -%}
-        <a href="{{ routes.account_url }}" class="site-header__icon site-header__icon--account" aria-label="{{ 'customer.account.title' | t }}">
+      {%- if show_account -%}
+        <a
+          href="{{ routes.account_url }}"
+          class="site-header__icon site-header__icon--account"
+          aria-label="{{ 'customer.account.title' | t }}"
+        >
           {%- render 'icon-account' -%}
         </a>
       {%- endif -%}
 
-      <button
-        type="button"
-        class="site-header__icon site-header__icon--cart"
-        data-cart-toggle
-        aria-label="{{ 'cart.general.title' | t }}"
-        {% if settings.cart_type == 'drawer' %}
+      {%- if show_cart -%}
+        <button
+          type="button"
+          class="site-header__icon site-header__icon--cart"
+          data-cart-toggle
+          aria-label="{{ 'cart.general.title' | t }}"
           aria-expanded="false"
           aria-controls="CartDrawer"
-        {% endif %}
-      >
-        {%- render 'icon-cart' -%}
-        <span class="site-header__cart-count" data-cart-count aria-hidden="true">{{ cart.item_count }}</span>
-        <span class="visually-hidden">{{ 'cart.general.item_count' | t: count: cart.item_count }}</span>
-      </button>
+        >
+          {%- render 'icon-cart' -%}
+          <span class="site-header__cart-count" data-cart-count aria-hidden="true">{{ cart.item_count }}</span>
+          <span class="visually-hidden">{{ 'cart.general.item_count' | t: count: cart.item_count }}</span>
+        </button>
+      {%- endif -%}
     </div>
   </div>
+
+  {%- comment -%} Secondary nav bar (optional) {%- endcomment -%}
+  {%- if secondary_menu != blank and linklists[secondary_menu].links.size > 0 -%}
+    <div class="site-header__secondary-bar">
+      <nav class="site-header__secondary-nav page-width" aria-label="{{ 'sections.header.secondary_nav' | t }}">
+        <ul class="site-header__secondary-list" role="list">
+          {%- for link in linklists[secondary_menu].links -%}
+            <li>
+              <a href="{{ link.url }}" class="site-header__secondary-link"{% if link.active %} aria-current="page"{% endif %}>
+                {{ link.title | escape }}
+              </a>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </nav>
+    </div>
+  {%- endif -%}
 </header>
+
+{%- comment -%} Mobile nav drawer content (rendered inline for SSR) {%- endcomment -%}
+{%- capture mobile_nav_content -%}
+  <nav class="mobile-nav" aria-label="{{ 'general.accessibility.main_nav' | t }}">
+    <ul class="mobile-nav__list" role="list">
+      {%- for link in linklists[main_menu].links -%}
+        <li class="mobile-nav__item">
+          <div class="mobile-nav__item-header">
+            <a href="{{ link.url }}" class="mobile-nav__link"{% if link.active %} aria-current="page"{% endif %}>
+              {{ link.title | escape }}
+            </a>
+            {%- if link.links != blank -%}
+              <button
+                type="button"
+                class="mobile-nav__toggle"
+                aria-expanded="false"
+                aria-controls="MobileSubmenu-{{ forloop.index }}"
+                aria-label="{{ 'sections.header.toggle_submenu' | t }}"
+              >
+                {%- render 'icon-arrow-down' -%}
+              </button>
+            {%- endif -%}
+          </div>
+          {%- if link.links != blank -%}
+            <ul class="mobile-nav__sublist" id="MobileSubmenu-{{ forloop.index }}" aria-hidden="true" role="list">
+              {%- for child_link in link.links -%}
+                <li class="mobile-nav__subitem">
+                  <a href="{{ child_link.url }}" class="mobile-nav__sublink"{% if child_link.active %} aria-current="page"{% endif %}>
+                    {{ child_link.title | escape }}
+                  </a>
+                  {%- if child_link.links != blank -%}
+                    <ul class="mobile-nav__subsublist" role="list">
+                      {%- for grandchild_link in child_link.links -%}
+                        <li>
+                          <a href="{{ grandchild_link.url }}" class="mobile-nav__subsublink"{% if grandchild_link.active %} aria-current="page"{% endif %}>
+                            {{ grandchild_link.title | escape }}
+                          </a>
+                        </li>
+                      {%- endfor -%}
+                    </ul>
+                  {%- endif -%}
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
+        </li>
+      {%- endfor -%}
+    </ul>
+
+    {%- if secondary_menu != blank and linklists[secondary_menu].links.size > 0 -%}
+      <div class="mobile-nav__secondary">
+        <h3 class="mobile-nav__secondary-heading">{{ linklists[secondary_menu].title | escape }}</h3>
+        <ul class="mobile-nav__secondary-list" role="list">
+          {%- for link in linklists[secondary_menu].links -%}
+            <li>
+              <a href="{{ link.url }}" class="mobile-nav__secondary-link"{% if link.active %} aria-current="page"{% endif %}>
+                {{ link.title | escape }}
+              </a>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+    {%- endif -%}
+
+    {%- if show_account -%}
+      <div class="mobile-nav__account">
+        <a href="{{ routes.account_url }}" class="btn btn--accent mobile-nav__account-btn">
+          {{ 'customer.account.title' | t }}
+        </a>
+        {%- if shop.customer_accounts_enabled -%}
+          {%- if customer -%}
+            <a href="{{ routes.account_logout_url }}" class="mobile-nav__account-link">{{ 'customer.account.logout' | t }}</a>
+          {%- else -%}
+            <a href="{{ routes.account_login_url }}" class="mobile-nav__account-link">{{ 'customer.account.login' | t }}</a>
+          {%- endif -%}
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- if section.settings.show_social_icons -%}
+      <div class="mobile-nav__social">
+        {%- render 'social-icons' -%}
+      </div>
+    {%- endif -%}
+  </nav>
+{%- endcapture -%}
+
+{%- comment -%} Inject mobile nav content into the drawer via JS target {%- endcomment -%}
+<script>
+  (function() {
+    var content = {{ mobile_nav_content | json }};
+    var drawer = document.getElementById('MobileNavDrawer');
+    if (drawer) {
+      var container = drawer.querySelector('.mobile-nav-drawer__content');
+      if (container) {
+        container.innerHTML = content;
+      }
+    }
+  })();
+</script>
 
 {% schema %}
 {
   "name": "t:sections.header.name",
   "class": "section-header",
   "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo_image",
+      "label": "t:sections.header.settings.logo_image.label"
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "label": "t:sections.header.settings.logo_width.label",
+      "min": 60,
+      "max": 400,
+      "step": 10,
+      "default": 140,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "logo_position",
+      "label": "t:sections.header.settings.logo_position.label",
+      "options": [
+        { "value": "left", "label": "t:sections.header.settings.logo_position.options.left" },
+        { "value": "center", "label": "t:sections.header.settings.logo_position.options.center" }
+      ],
+      "default": "center"
+    },
     {
       "type": "link_list",
       "id": "main_menu",
@@ -135,9 +294,49 @@
     },
     {
       "type": "checkbox",
+      "id": "enable_sticky",
+      "label": "t:sections.header.settings.enable_sticky.label",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "sticky_style",
+      "label": "t:sections.header.settings.sticky_style.label",
+      "options": [
+        { "value": "always", "label": "t:sections.header.settings.sticky_style.options.always" },
+        { "value": "on_scroll_up", "label": "t:sections.header.settings.sticky_style.options.on_scroll_up" }
+      ],
+      "default": "on_scroll_up"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_search",
+      "label": "t:sections.header.settings.show_search.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_cart",
+      "label": "t:sections.header.settings.show_cart.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_account",
+      "label": "t:sections.header.settings.show_account.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
       "id": "show_social_icons",
       "label": "t:sections.header.settings.show_social_icons.label",
       "default": false
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.header.presets.name",
+      "category": "Header"
     }
   ]
 }

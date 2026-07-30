@@ -1,0 +1,85 @@
+{%- comment -%}
+  Solaire Theme — Main Page Section
+  Simple page section with title and rich text content area.
+  Used by the page template (templates/page.json).
+{%- endcomment -%}
+
+{%- liquid
+  assign page = page
+  assign show_title = section.settings.show_title | default: true
+  assign page_width = section.settings.page_width | default: 'medium'
+  assign text_alignment = section.settings.text_alignment | default: 'left'
+  assign show_featured_image = section.settings.show_featured_image | default: true
+-%}
+
+<div class="main-page main-page--width-{{ page_width }} main-page--text-{{ text_alignment }}">
+  <div class="main-page__container page-width">
+    {%- if show_featured_image and page.metafields.custom.featured_image != blank -%}
+      <div class="main-page__featured-image">
+        <img
+          src="{{ page.metafields.custom.featured_image | img_url: 'master' }}"
+          alt="{{ page.title | escape }}"
+          loading="eager"
+          class="main-page__image"
+        >
+      </div>
+    {%- endif -%}
+
+    {%- if show_title -%}
+      <h1 class="main-page__title">{{ page.title | escape }}</h1>
+    {%- endif -%}
+
+    <div class="main-page__content rte">
+      {{ page.content }}
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "t:sections.main-page.name",
+  "class": "section-main-page",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_title",
+      "label": "t:sections.main-page.settings.show_title.label",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "page_width",
+      "label": "t:sections.main-page.settings.page_width.label",
+      "default": "medium",
+      "options": [
+        { "value": "narrow", "label": "t:sections.main-page.settings.page_width.options.narrow" },
+        { "value": "medium", "label": "t:sections.main-page.settings.page_width.options.medium" },
+        { "value": "wide", "label": "t:sections.main-page.settings.page_width.options.wide" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "text_alignment",
+      "label": "t:sections.main-page.settings.text_alignment.label",
+      "default": "left",
+      "options": [
+        { "value": "left", "label": "t:sections.main-page.settings.text_alignment.options.left" },
+        { "value": "center", "label": "t:sections.main-page.settings.text_alignment.options.center" }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "show_featured_image",
+      "label": "t:sections.main-page.settings.show_featured_image.label",
+      "default": true,
+      "info": "t:sections.main-page.settings.show_featured_image.info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.main-page.presets.name",
+      "category": "Page"
+    }
+  ]
+}
+{% endschema %}

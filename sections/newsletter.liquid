@@ -1,20 +1,77 @@
 {%- comment -%}
   Solaire Theme — Newsletter Section
-  Email signup form for building the mailing list.
+  Clean, minimal email signup with success/error states.
+  Integrates with Shopify's customer form via the newsletter-form snippet.
 {%- endcomment -%}
 
-<section class="newsletter section-spacing newsletter--{{ section.settings.color_scheme | default: 'dark' }}" data-section-id="{{ section.id }}">
+{%- liquid
+  assign heading = section.settings.heading
+  assign subheading = section.settings.subheading
+  assign button_text = section.settings.button_text | default: 'Subscribe'
+  assign placeholder_text = section.settings.placeholder_text | default: 'Enter your email'
+  assign color_scheme = section.settings.color_scheme | default: 'dark'
+-%}
+
+<section
+  class="newsletter section-spacing newsletter--{{ color_scheme }}"
+  data-section-id="{{ section.id }}"
+>
   <div class="page-width">
     <div class="newsletter__inner">
-      {%- if section.settings.heading != blank -%}
-        <h2 class="newsletter__heading">{{ section.settings.heading | escape }}</h2>
+      {%- if heading != blank -%}
+        <h2 class="newsletter__heading h3">{{ heading | escape }}</h2>
       {%- endif -%}
 
-      {%- if section.settings.subtext != blank -%}
-        <p class="newsletter__subtext">{{ section.settings.subtext | escape }}</p>
+      {%- if subheading != blank -%}
+        <p class="newsletter__subtext">{{ subheading | escape }}</p>
       {%- endif -%}
 
-      {%- render 'newsletter-form', section: section -%}
+      {%- form 'customer', class: 'newsletter-form' -%}
+        <input type="hidden" name="contact[tags]" value="newsletter">
+
+        <div class="newsletter-form__wrapper">
+          <label for="NewsletterForm-{{ section.id }}" class="visually-hidden">
+            {{ 'newsletter.label' | t }}
+          </label>
+
+          <div class="newsletter-form__input-group">
+            <input
+              id="NewsletterForm-{{ section.id }}"
+              type="email"
+              name="contact[email]"
+              class="newsletter-form__input"
+              value="{{ form.email }}"
+              placeholder="{{ placeholder_text | escape }}"
+              aria-required="true"
+              autocorrect="off"
+              autocapitalize="off"
+              autocomplete="email"
+              required
+            >
+
+            <button
+              type="submit"
+              class="newsletter-form__button"
+              name="commit"
+            >
+              <span class="newsletter-form__button-text">{{ button_text | escape }}</span>
+              {%- render 'icon-arrow-right' -%}
+            </button>
+          </div>
+        </div>
+
+        {%- if form.errors -%}
+          <div class="newsletter-form__message newsletter-form__message--error" role="alert">
+            <p>{{ form.errors | default_errors }}</p>
+          </div>
+        {%- endif -%}
+
+        {%- if form.posted_successfully? -%}
+          <div class="newsletter-form__message newsletter-form__message--success" role="status">
+            <p>{{ 'newsletter.success' | t }}</p>
+          </div>
+        {%- endif -%}
+      {%- endform -%}
     </div>
   </div>
 </section>
@@ -32,17 +89,30 @@
     },
     {
       "type": "text",
-      "id": "subtext",
-      "label": "t:sections.newsletter.settings.subtext.label",
+      "id": "subheading",
+      "label": "t:sections.newsletter.settings.subheading.label",
       "default": "Be the first to know about new drops and exclusive offers."
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "t:sections.newsletter.settings.button_text.label",
+      "default": "Subscribe"
+    },
+    {
+      "type": "text",
+      "id": "placeholder_text",
+      "label": "t:sections.newsletter.settings.placeholder_text.label",
+      "default": "Enter your email"
     },
     {
       "type": "select",
       "id": "color_scheme",
       "label": "t:sections.newsletter.settings.color_scheme.label",
       "options": [
+        { "value": "dark", "label": "t:sections.newsletter.settings.color_scheme.options.dark" },
         { "value": "light", "label": "t:sections.newsletter.settings.color_scheme.options.light" },
-        { "value": "dark", "label": "t:sections.newsletter.settings.color_scheme.options.dark" }
+        { "value": "accent", "label": "t:sections.newsletter.settings.color_scheme.options.accent" }
       ],
       "default": "dark"
     }

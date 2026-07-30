@@ -1,7 +1,99 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
-  "current": "Default",
+  "current": {
+    "color_bg_primary": "#faf8f5",
+    "color_bg_secondary": "#f3f0eb",
+    "color_bg_dark": "#1a1a1a",
+    "color_bg_rich_black": "#0d0d0d",
+    "color_text_primary": "#1a1a1a",
+    "color_text_secondary": "#6b6b6b",
+    "color_text_light": "#faf8f5",
+    "color_accent": "#c9a96e",
+    "color_accent_hover": "#b8934f",
+    "color_button_bg": "#1a1a1a",
+    "color_button_text": "#faf8f5",
+    "color_button_accent_bg": "#c9a96e",
+    "color_button_accent_text": "#1a1a1a",
+    "color_border": "#e0dcd5",
+    "color_error": "#c13515",
+    "color_success": "#2d6a4f",
+    "color_sale_badge": "#c13515",
+    "color_sold_out_badge": "#6b6b6b",
+    "font_heading": "playfair",
+    "font_body": "inter",
+    "font_size_base": 16,
+    "font_scale_ratio": 1.3,
+    "font_weight_heading": 400,
+    "font_weight_body": 400,
+    "letter_spacing_heading": 0,
+    "letter_spacing_body": 0,
+    "logo": "",
+    "logo_width": 140,
+    "logo_position": "center",
+    "menu_style": "horizontal",
+    "enable_sticky_header": true,
+    "sticky_header_style": "on_scroll_up",
+    "enable_transparent_header": false,
+    "show_search": true,
+    "show_account_icon": true,
+    "header_padding": "standard",
+    "footer_show_social": true,
+    "footer_show_newsletter": true,
+    "footer_newsletter_heading": "<p>Stay in the loop</p>",
+    "footer_newsletter_subtext": "<p>Early access to new drops and exclusive offers.</p>",
+    "footer_show_payment_icons": true,
+    "footer_color_scheme": "dark",
+    "footer_copyright_text": "<p>© {{ 'now' | date: '%Y' }} {{ shop.name }}. All rights reserved.</p>",
+    "footer_show_language_selector": true,
+    "footer_show_currency_selector": true,
+    "enable_image_zoom": true,
+    "image_zoom_type": "lightbox",
+    "gallery_layout": "thumbnails",
+    "variant_style": "swatches",
+    "enable_size_guide": true,
+    "size_guide_page": "",
+    "show_sku": false,
+    "show_barcode": false,
+    "show_share_buttons": true,
+    "show_vendor": true,
+    "show_inventory": false,
+    "product_form_position": "right",
+    "enable_sticky_atc": true,
+    "show_trust_badges": false,
+    "cart_type": "drawer",
+    "cart_show_notes": true,
+    "cart_show_shipping_estimate": false,
+    "cart_free_shipping_threshold": 10000,
+    "cart_free_shipping_message": "<p>Free shipping on orders over {{ settings.cart_free_shipping_threshold | money }}</p>",
+    "social_instagram_url": "https://instagram.com/solaireeyewear",
+    "social_facebook_url": "https://facebook.com/solaireeyewear",
+    "social_pinterest_url": "",
+    "social_tiktok_url": "https://tiktok.com/@solaireeyewear",
+    "social_youtube_url": "",
+    "social_twitter_url": "",
+    "social_snapchat_url": "",
+    "social_vimeo_url": "",
+    "favicon": "",
+    "social_sharing_image": "",
+    "custom_css": "",
+    "blocks": {
+      "7924418359578431505": {
+        "type": "shopify://apps/seoant-ai-seo/blocks/seoant-core/8e57283b-dcb0-4f7b-a947-fb5c57a0d59d",
+        "disabled": false,
+        "settings": {}
+      }
+    }
+  },
   "presets": {
-    "Default": {
+    "Solaire": {
       "color_bg_primary": "#faf8f5",
       "color_bg_secondary": "#f3f0eb",
       "color_bg_dark": "#1a1a1a",
@@ -64,7 +156,7 @@
       "cart_type": "drawer",
       "cart_show_notes": true,
       "cart_show_shipping_estimate": false,
-      "cart_free_shipping_threshold": "100",
+      "cart_free_shipping_threshold": 10000,
       "cart_free_shipping_message": "Free shipping on orders over {{ settings.cart_free_shipping_threshold | money }}",
       "social_instagram_url": "https://instagram.com/solaireeyewear",
       "social_facebook_url": "https://facebook.com/solaireeyewear",
@@ -74,7 +166,9 @@
       "social_twitter_url": "",
       "social_snapchat_url": "",
       "social_vimeo_url": "",
-      "favicon": ""
+      "favicon": "",
+      "social_sharing_image": "",
+      "custom_css": ""
     }
   }
 }

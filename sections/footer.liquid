@@ -1,15 +1,18 @@
 {%- comment -%}
   Solaire Theme — Footer Section
-  Premium footer with newsletter, navigation columns, social icons, and payment badges.
+  Multi-column footer: brand + social, quick links, customer service, newsletter.
 {%- endcomment -%}
 
 {%- liquid
-  assign color_scheme = settings.footer_color_scheme | default: 'dark'
-  assign show_social = settings.footer_show_social
-  assign show_newsletter = settings.footer_show_newsletter
-  assign show_payment = settings.footer_show_payment_icons
-  assign show_lang = settings.footer_show_language_selector
-  assign show_currency = settings.footer_show_currency_selector
+  assign color_scheme = section.settings.color_scheme | default: 'dark'
+  assign show_social = section.settings.show_social | default: true
+  assign show_newsletter = section.settings.show_newsletter | default: true
+  assign show_payment = section.settings.show_payment_icons | default: true
+  assign about_text = section.settings.about_text
+  assign quick_links_menu = section.settings.quick_links_menu | default: 'footer'
+  assign service_menu = section.settings.service_menu
+  assign newsletter_heading = section.settings.newsletter_heading | default: 'Join the list'
+  assign newsletter_subtext = section.settings.newsletter_subtext | default: 'Be the first to know about new arrivals and exclusive offers.'
 -%}
 
 <footer
@@ -17,83 +20,147 @@
   role="contentinfo"
   aria-label="{{ 'general.accessibility.footer' | t }}"
 >
-  <div class="site-footer__inner page-width">
-    {%- comment -%} Top row: newsletter + nav columns {%- endcomment -%}
+  <div class="page-width">
     <div class="site-footer__top">
+      {%- comment -%} Column 1: Brand {%- endcomment -%}
+      <div class="site-footer__brand">
+        {%- if section.settings.footer_logo != blank -%}
+          <div class="site-footer__logo">
+            <img
+              src="{{ section.settings.footer_logo | image_url: width: 200 }}"
+              alt="{{ shop.name | escape }}"
+              width="{{ section.settings.footer_logo_width | default: 120 }}"
+              height="{{ section.settings.footer_logo_width | default: 120 | divided_by: section.settings.footer_logo.aspect_ratio | round }}"
+              class="site-footer__logo-img"
+              loading="lazy"
+            >
+          </div>
+        {%- else -%}
+          <h2 class="site-footer__brand-name">{{ shop.name }}</h2>
+        {%- endif -%}
+
+        {%- if about_text != blank -%}
+          <div class="site-footer__brand-text">
+            <p>{{ about_text | escape }}</p>
+          </div>
+        {%- endif -%}
+
+        {%- if show_social -%}
+          <div class="site-footer__social">
+            {%- render 'social-icons' -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} Columns 2+3: Quick links + Customer service {%- endcomment -%}
+      <div class="site-footer__nav-columns">
+        {%- comment -%} Quick links {%- endcomment -%}
+        {%- if quick_links_menu != blank and linklists[quick_links_menu].links.size > 0 -%}
+          <div class="site-footer__nav-column site-footer__nav-column--accordion" data-accordion>
+            <button
+              type="button"
+              class="site-footer__nav-column-toggle"
+              aria-expanded="false"
+              aria-controls="FooterNav-{{ section.id }}-quicklinks"
+              data-accordion-toggle
+            >
+              <span>{{ linklists[quick_links_menu].title | escape }}</span>
+              {%- render 'icon-arrow-down' -%}
+            </button>
+            <h4 class="site-footer__nav-heading site-footer__nav-heading--desktop">{{ linklists[quick_links_menu].title | escape }}</h4>
+            <ul class="site-footer__nav-list" id="FooterNav-{{ section.id }}-quicklinks" role="list">
+              {%- for link in linklists[quick_links_menu].links -%}
+                <li class="site-footer__nav-item">
+                  <a href="{{ link.url }}" class="site-footer__nav-link"{% if link.active %} aria-current="page"{% endif %}>
+                    {{ link.title | escape }}
+                  </a>
+                </li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Customer service {%- endcomment -%}
+        {%- if service_menu != blank and linklists[service_menu].links.size > 0 -%}
+          <div class="site-footer__nav-column site-footer__nav-column--accordion" data-accordion>
+            <button
+              type="button"
+              class="site-footer__nav-column-toggle"
+              aria-expanded="false"
+              aria-controls="FooterNav-{{ section.id }}-service"
+              data-accordion-toggle
+            >
+              <span>{{ linklists[service_menu].title | escape }}</span>
+              {%- render 'icon-arrow-down' -%}
+            </button>
+            <h4 class="site-footer__nav-heading site-footer__nav-heading--desktop">{{ linklists[service_menu].title | escape }}</h4>
+            <ul class="site-footer__nav-list" id="FooterNav-{{ section.id }}-service" role="list">
+              {%- for link in linklists[service_menu].links -%}
+                <li class="site-footer__nav-item">
+                  <a href="{{ link.url }}" class="site-footer__nav-link"{% if link.active %} aria-current="page"{% endif %}>
+                    {{ link.title | escape }}
+                  </a>
+                </li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} Column 4: Newsletter {%- endcomment -%}
       {%- if show_newsletter -%}
         <div class="site-footer__newsletter">
-          {%- if settings.footer_newsletter_heading != blank -%}
-            <h3 class="site-footer__newsletter-heading">
-              {{ settings.footer_newsletter_heading }}
-            </h3>
+          {%- if newsletter_heading != blank -%}
+            <h3 class="site-footer__newsletter-heading">{{ newsletter_heading }}</h3>
           {%- endif -%}
-          {%- if settings.footer_newsletter_subtext != blank -%}
-            <p class="site-footer__newsletter-subtext">
-              {{ settings.footer_newsletter_subtext }}
-            </p>
+          {%- if newsletter_subtext != blank -%}
+            <p class="site-footer__newsletter-subtext">{{ newsletter_subtext }}</p>
           {%- endif -%}
-          {%- render 'newsletter-form' -%}
+          {%- render 'newsletter-form', section: section -%}
         </div>
       {%- endif -%}
-
-      {%- comment -%} Footer navigation columns {%- endcomment -%}
-      <div class="site-footer__nav-columns">
-        {%- for link in linklists.footer.links -%}
-          <div class="site-footer__nav-column">
-            <h4 class="site-footer__nav-heading">{{ link.title | escape }}</h4>
-            {%- if link.links != blank -%}
-              <ul class="site-footer__nav-list" role="list">
-                {%- for child_link in link.links -%}
-                  <li class="site-footer__nav-item">
-                    <a href="{{ child_link.url }}" class="site-footer__nav-link">
-                      {{ child_link.title | escape }}
-                    </a>
-                  </li>
-                {%- endfor -%}
-              </ul>
-            {%- endif -%}
-          </div>
-        {%- endfor -%}
-      </div>
     </div>
 
-    {%- comment -%} Bottom row: social, payment icons, selectors, copyright {%- endcomment -%}
+    {%- comment -%} Bottom bar {%- endcomment -%}
     <div class="site-footer__bottom">
-      <div class="site-footer__bottom-left">
-        {%- if show_social -%}
-          {%- render 'social-icons' -%}
-        {%- endif -%}
-      </div>
+      <p class="site-footer__copyright">
+        &copy; {{ 'now' | date: '%Y' }} {{ shop.name }}. {{ 'sections.footer.all_rights_reserved' | t }}
+      </p>
 
-      <div class="site-footer__bottom-center">
-        {%- if show_lang or show_currency -%}
-          <div class="site-footer__selectors">
-            {%- if show_lang and localization.available_languages.size > 1 -%}
-              {%- render 'language-selector' -%}
-            {%- endif -%}
-            {%- if show_currency and localization.available_countries.size > 1 -%}
-              {%- render 'currency-selector' -%}
-            {%- endif -%}
-          </div>
-        {%- endif -%}
-      </div>
-
-      <div class="site-footer__bottom-right">
-        {%- if show_payment -%}
-          <div class="site-footer__payment-icons">
-            {%- for type in shop.enabled_payment_types -%}
-              {{ type | payment_type_svg_tag: class: 'site-footer__payment-icon' }}
-            {%- endfor -%}
-          </div>
-        {%- endif -%}
-
-        <p class="site-footer__copyright">
-          {{ settings.footer_copyright_text }}
-        </p>
-      </div>
+      {%- if show_payment -%}
+        <div class="site-footer__payment-icons">
+          {%- for type in shop.enabled_payment_types -%}
+            {{ type | payment_type_svg_tag: class: 'site-footer__payment-icon' }}
+          {%- else -%}
+            {%- comment -%} Fallback payment icons if none configured {%- endcomment -%}
+            <svg class="site-footer__payment-icon" viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="Visa"><path fill="#1434CB" d="M35 0H3C1.3 0 0 1.3 0 3v18c0 1.7 1.4 3 3 3h32c1.7 0 3-1.3 3-3V3c0-1.7-1.4-3-3-3z" opacity=".07"/><path fill="#fff" d="M35 1c1.1 0 2 .9 2 2v18c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V3c0-1.1.9-2 2-2h32"/><path fill="#1434CB" d="M15.1 8.2h-1.6l-2 7.6h1.4l.4-1.6h2l.4 1.6h1.5l-2.1-7.6zm-1.3 4.8l.8-2.1.5 2.1h-1.3zm5.7-3l-.9 4.8h1.3l.9-4.8h-1.3zm2.5 3.1c-.5.3-1 .5-1.5.5-.6 0-.9-.3-.9-.7 0-.5.5-.8 1.3-1.1.9-.3 1.9-.8 1.9-1.8 0-1.1-1-1.8-2.4-1.8-.7 0-1.5.2-2 .5l.3 1.1c.5-.3 1.1-.5 1.6-.5.6 0 .9.3.9.6 0 .6-.5.9-1.3 1.2-1 .3-1.9.8-1.9 1.8 0 1.1 1 1.8 2.5 1.8.7 0 1.4-.2 2-.6l-.5-1zm3.3.3c.2.8.8 1.3 1.6 1.3.5 0 1-.2 1.4-.5l.3 1c-.5.3-1.2.5-1.9.5-1.6 0-2.7-1.1-2.7-2.6 0-1.5 1.1-2.7 2.6-2.7 1.5 0 2.3 1.1 2.3 2.4v.6h-3.6zm2.8-.7c0-.7-.4-1.3-1.2-1.3-.7 0-1.2.6-1.3 1.3h2.5z"/></svg>
+            <svg class="site-footer__payment-icon" viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="Mastercard"><path fill="#FF5A00" d="M35 0H3C1.3 0 0 1.3 0 3v18c0 1.7 1.4 3 3 3h32c1.7 0 3-1.3 3-3V3c0-1.7-1.4-3-3-3z" opacity=".07"/><path fill="#fff" d="M35 1c1.1 0 2 .9 2 2v18c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V3c0-1.1.9-2 2-2h32"/><circle fill="#EB001B" cx="15" cy="12" r="7"/><circle fill="#F79E1B" cx="23" cy="12" r="7"/><path fill="#FF5A00" d="M22 12c0-2.4-1.2-4.5-3-5.7-1.8 1.3-3 3.4-3 5.7s1.2 4.5 3 5.7c1.8-1.2 3-3.3 3-5.7z"/></svg>
+            <svg class="site-footer__payment-icon" viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="American Express"><path fill="#006FCF" d="M35 0H3C1.3 0 0 1.3 0 3v18c0 1.7 1.4 3 3 3h32c1.7 0 3-1.3 3-3V3c0-1.7-1.4-3-3-3z" opacity=".07"/><path fill="#fff" d="M35 1c1.1 0 2 .9 2 2v18c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V3c0-1.1.9-2 2-2h32"/><path fill="#006FCF" d="M19.2 9.6l-1.5 3.3h2.2l-.7-3.3zm-3.6 5.8l.5-1.1h-1.1l-.3.7.9-.6zm12.5-3.3l-1.3 1.4.7.8 1.2-1.4-.6-.8z"/></svg>
+            <svg class="site-footer__payment-icon" viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="PayPal"><path fill="#003087" d="M35 0H3C1.3 0 0 1.3 0 3v18c0 1.7 1.4 3 3 3h32c1.7 0 3-1.3 3-3V3c0-1.7-1.4-3-3-3z" opacity=".07"/><path fill="#fff" d="M35 1c1.1 0 2 .9 2 2v18c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V3c0-1.1.9-2 2-2h32"/><path fill="#003087" d="M24 7.2c-.3-.2-.7-.4-1.1-.4-.9 0-1.6.4-2 .9l-1.2 7.3h1.5l.3-2h1.1c1.5 0 2.7-1 3-2.4.2-.7 0-1.4-.6-1.9l-.8.5c.4.3.5.7.4 1.2-.2.9-1.1 1.5-2.1 1.5h-1.4l.5-3.1c0-.3.3-.5.7-.5.2 0 .4.1.6.2l.1-1.3z"/></svg>
+            <svg class="site-footer__payment-icon" viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="Apple Pay"><path fill="#000" d="M35 0H3C1.3 0 0 1.3 0 3v18c0 1.7 1.4 3 3 3h32c1.7 0 3-1.3 3-3V3c0-1.7-1.4-3-3-3z" opacity=".07"/><path fill="#fff" d="M35 1c1.1 0 2 .9 2 2v18c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V3c0-1.1.9-2 2-2h32"/><path fill="#000" d="M13.2 8.1c-.3 0-.7-.1-.9-.3-.2-.2-.3-.5-.3-.8 0-.3.1-.6.3-.8.2-.2.5-.3.9-.3.3 0 .7.1.9.3.2.2.3.5.3.8 0 .3-.1.6-.3.8-.3.2-.6.3-.9.3z"/></svg>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
     </div>
   </div>
 </footer>
+
+{%- comment -%} Accordion JS for mobile footer nav {%- endcomment -%}
+<script>
+  (function() {
+    var toggles = document.querySelectorAll('[data-accordion-toggle]');
+    toggles.forEach(function(toggle) {
+      toggle.addEventListener('click', function() {
+        var accordion = this.closest('[data-accordion]');
+        var expanded = this.getAttribute('aria-expanded') === 'true';
+        this.setAttribute('aria-expanded', !expanded);
+        if (accordion) {
+          accordion.setAttribute('data-open', !expanded);
+        }
+      });
+    });
+  })();
+</script>
 
 {% schema %}
 {
@@ -101,16 +168,98 @@
   "class": "section-footer",
   "settings": [
     {
-      "type": "link_list",
-      "id": "footer_menu",
-      "label": "t:sections.footer.settings.footer_menu.label",
-      "default": "footer"
+      "type": "header",
+      "content": "t:sections.footer.settings.brand_header.content"
+    },
+    {
+      "type": "image_picker",
+      "id": "footer_logo",
+      "label": "t:sections.footer.settings.footer_logo.label"
+    },
+    {
+      "type": "range",
+      "id": "footer_logo_width",
+      "label": "t:sections.footer.settings.footer_logo_width.label",
+      "min": 60,
+      "max": 300,
+      "step": 10,
+      "default": 120,
+      "unit": "px"
+    },
+    {
+      "type": "textarea",
+      "id": "about_text",
+      "label": "t:sections.footer.settings.about_text.label",
+      "default": "Premium eyewear designed for those who see differently. Crafted with intention since 2024."
     },
     {
       "type": "checkbox",
-      "id": "show_payment_icons_override",
-      "label": "t:sections.footer.settings.show_payment_icons_override.label",
+      "id": "show_social",
+      "label": "t:sections.footer.settings.show_social.label",
       "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:sections.footer.settings.menus_header.content"
+    },
+    {
+      "type": "link_list",
+      "id": "quick_links_menu",
+      "label": "t:sections.footer.settings.quick_links_menu.label",
+      "default": "footer"
+    },
+    {
+      "type": "link_list",
+      "id": "service_menu",
+      "label": "t:sections.footer.settings.service_menu.label"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.footer.settings.newsletter_header.content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_newsletter",
+      "label": "t:sections.footer.settings.show_newsletter.label",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "newsletter_heading",
+      "label": "t:sections.footer.settings.newsletter_heading.label",
+      "default": "Join the list"
+    },
+    {
+      "type": "richtext",
+      "id": "newsletter_subtext",
+      "label": "t:sections.footer.settings.newsletter_subtext.label",
+      "default": "<p>Be the first to know about new arrivals and exclusive offers.</p>"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.footer.settings.style_header.content"
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "label": "t:sections.footer.settings.color_scheme.label",
+      "options": [
+        { "value": "dark", "label": "t:sections.footer.settings.color_scheme.options.dark" },
+        { "value": "light", "label": "t:sections.footer.settings.color_scheme.options.light" }
+      ],
+      "default": "dark"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_payment_icons",
+      "label": "t:sections.footer.settings.show_payment_icons.label",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.footer.presets.name",
+      "category": "Footer"
     }
   ]
 }

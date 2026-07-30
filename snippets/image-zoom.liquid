@@ -1,0 +1,45 @@
+{%- comment -%}
+  Solaire Theme — Image Zoom Snippet
+  Magnify-on-hover effect for product images.
+  Lens follows cursor, high-res zoom image loaded from product featured image.
+  Smooth CSS transitions; disabled on touch devices.
+  Accessibility: does not interfere with screen readers.
+{%- endcomment -%}
+
+{%- liquid
+  assign image = image | default: nil
+-%}
+{%- if image != nil -%}
+{%- liquid
+  assign zoom_id = zoom_id | default: 'ProductZoom-' | append: section.id
+  assign zoom_enabled = zoom_enabled | default: true
+
+  assign zoom_image_alt = image.alt | default: product.title | escape
+-%}
+
+{%- if image != blank and zoom_enabled -%}
+  <div
+    class="image-zoom"
+    id="{{ zoom_id }}"
+    data-zoom-enabled="true"
+    role="img"
+    aria-label="{{ zoom_image_alt }}"
+  >
+    {%- render 'lazy-image',
+      image: image,
+      sizes: '(min-width: 1024px) 60vw, 100vw',
+      class: 'image-zoom__main',
+      alt: zoom_image_alt
+    -%}
+
+    <div class="image-zoom__lens" aria-hidden="true">
+      <img
+        src="{{ image | image_url: width: 1500 }}"
+        alt="{{ zoom_image_alt }}"
+        class="image-zoom__lens-image"
+        loading="lazy"
+      >
+    </div>
+  </div>
+{%- endif -%}
+{%- endif -%}

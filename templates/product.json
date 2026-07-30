@@ -1,14 +1,31 @@
 {
   "sections": {
-    "main": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "disabled": true
+    },
+    "header": {
+      "type": "header"
+    },
+    "main-product": {
       "type": "main-product"
     },
     "related-products": {
       "type": "featured-collection"
+    },
+    "newsletter": {
+      "type": "newsletter"
+    },
+    "footer": {
+      "type": "footer"
     }
   },
   "order": [
-    "main",
-    "related-products"
+    "announcement-bar",
+    "header",
+    "main-product",
+    "related-products",
+    "newsletter",
+    "footer"
   ]
 }

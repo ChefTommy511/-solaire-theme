@@ -1,20 +1,62 @@
 {%- comment -%}
   Solaire Theme — Announcement Bar Section
-  Top-of-page banner for promotions, shipping info, or announcements.
+  Rotating messages, optional links, dismiss button, color schemes.
 {%- endcomment -%}
 
-{%- if section.settings.enabled and section.settings.message != blank -%}
+{%- liquid
+  assign enabled = section.settings.enabled | default: true
+  assign color_scheme = section.settings.color_scheme | default: 'dark'
+  assign autoplay_speed = section.settings.autoplay_speed | default: 5000
+  assign show_dismiss = section.settings.show_dismiss | default: true
+  assign messages = section.blocks | where: 'type', 'message'
+-%}
+
+{%- if enabled and messages.size > 0 -%}
   <aside
-    class="announcement-bar"
+    class="announcement-bar announcement-bar--{{ color_scheme }}{% if messages.size > 1 %} announcement-bar--rotate{% endif %}"
     data-section-id="{{ section.id }}"
+    data-announcement-bar
+    {% if messages.size > 1 %}data-autoplay-speed="{{ autoplay_speed }}"{% endif %}
     role="region"
     aria-label="{{ 'sections.announcement_bar.label' | t }}"
   >
     <div class="announcement-bar__inner page-width">
-      <p class="announcement-bar__message">
-        {{ section.settings.message | escape }}
-      </p>
-      {%- if section.settings.show_close -%}
+      <div class="announcement-bar__messages">
+        {%- for block in messages -%}
+          {%- assign message_text = block.settings.text -%}
+          {%- assign message_link = block.settings.link -%}
+          <div
+            class="announcement-bar__slide{% if forloop.first %} announcement-bar__slide--active{% endif %}"
+            data-announcement-slide
+            data-index="{{ forloop.index0 }}"
+            {{ block.shopify_attributes }}
+          >
+            {%- if message_link != blank -%}
+              <a href="{{ message_link }}" class="announcement-bar__message announcement-bar__message--link">
+                {{ message_text | escape }}
+              </a>
+            {%- else -%}
+              <span class="announcement-bar__message">{{ message_text | escape }}</span>
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
+      </div>
+
+      {%- if messages.size > 1 -%}
+        <div class="announcement-bar__dots" aria-hidden="true">
+          {%- for block in messages -%}
+            <button
+              type="button"
+              class="announcement-bar__dot{% if forloop.first %} announcement-bar__dot--active{% endif %}"
+              data-announcement-dot
+              data-index="{{ forloop.index0 }}"
+              aria-label="{{ 'sections.announcement_bar.go_to_message' | t: number: forloop.index }}"
+            ></button>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      {%- if show_dismiss -%}
         <button
           type="button"
           class="announcement-bar__close"
@@ -26,6 +68,57 @@
       {%- endif -%}
     </div>
   </aside>
+{%- endif -%}
+
+{%- if messages.size > 1 -%}
+  <script>
+    (function() {
+      var bar = document.querySelector('[data-announcement-bar]');
+      if (!bar) return;
+      var speed = parseInt(bar.getAttribute('data-autoplay-speed'), 10) || 5000;
+      var slides = bar.querySelectorAll('[data-announcement-slide]');
+      var dots = bar.querySelectorAll('[data-announcement-dot]');
+      var current = 0;
+      var total = slides.length;
+      var interval;
+
+      function showSlide(index) {
+        slides.forEach(function(s, i) {
+          s.classList.toggle('announcement-bar__slide--active', i === index);
+        });
+        dots.forEach(function(d, i) {
+          d.classList.toggle('announcement-bar__dot--active', i === index);
+        });
+        current = index;
+      }
+
+      function next() {
+        showSlide((current + 1) % total);
+      }
+
+      function startAutoplay() {
+        stopAutoplay();
+        interval = setInterval(next, speed);
+      }
+
+      function stopAutoplay() {
+        if (interval) clearInterval(interval);
+      }
+
+      dots.forEach(function(dot) {
+        dot.addEventListener('click', function() {
+          var idx = parseInt(this.getAttribute('data-index'), 10);
+          showSlide(idx);
+          startAutoplay();
+        });
+      });
+
+      bar.addEventListener('mouseenter', stopAutoplay);
+      bar.addEventListener('mouseleave', startAutoplay);
+
+      startAutoplay();
+    })();
+  </script>
 {%- endif -%}
 
 {% schema %}
@@ -40,34 +133,62 @@
       "default": true
     },
     {
-      "type": "text",
-      "id": "message",
-      "label": "t:sections.announcement-bar.settings.message.label",
-      "default": "Free shipping on orders over {{ settings.cart_free_shipping_threshold | money }}"
+      "type": "select",
+      "id": "color_scheme",
+      "label": "t:sections.announcement-bar.settings.color_scheme.label",
+      "options": [
+        { "value": "dark", "label": "t:sections.announcement-bar.settings.color_scheme.options.dark" },
+        { "value": "light", "label": "t:sections.announcement-bar.settings.color_scheme.options.light" },
+        { "value": "gold", "label": "t:sections.announcement-bar.settings.color_scheme.options.gold" }
+      ],
+      "default": "dark"
+    },
+    {
+      "type": "range",
+      "id": "autoplay_speed",
+      "label": "t:sections.announcement-bar.settings.autoplay_speed.label",
+      "min": 2000,
+      "max": 9500,
+      "step": 500,
+      "default": 5000,
+      "unit": "ms",
+      "info": "t:sections.announcement-bar.settings.autoplay_speed.info"
     },
     {
       "type": "checkbox",
-      "id": "show_close",
-      "label": "t:sections.announcement-bar.settings.show_close.label",
+      "id": "show_dismiss",
+      "label": "t:sections.announcement-bar.settings.show_dismiss.label",
       "default": true
-    },
+    }
+  ],
+  "blocks": [
     {
-      "type": "color",
-      "id": "bg_color",
-      "label": "t:sections.announcement-bar.settings.bg_color.label",
-      "default": "#1a1a1a"
-    },
-    {
-      "type": "color",
-      "id": "text_color",
-      "label": "t:sections.announcement-bar.settings.text_color.label",
-      "default": "#faf8f5"
+      "type": "message",
+      "name": "t:sections.announcement-bar.blocks.message.name",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "t:sections.announcement-bar.blocks.message.settings.text.label",
+          "default": "Free shipping on orders over $50"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:sections.announcement-bar.blocks.message.settings.link.label"
+        }
+      ]
     }
   ],
   "presets": [
     {
       "name": "t:sections.announcement-bar.presets.name",
-      "category": "Header"
+      "category": "Header",
+      "blocks": [
+        { "type": "message", "settings": { "text": "Free shipping on orders over $50" } },
+        { "type": "message", "settings": { "text": "New arrivals — shop the latest collection" } },
+        { "type": "message", "settings": { "text": "Easy 30-day returns & exchanges" } }
+      ]
     }
   ]
 }
