@@ -1,20 +1,17 @@
 import { shopifyApp } from "@shopify/shopify-app-remix/server";
-import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
+import { SqlJsSessionStorage } from "./sqljs-session-storage.server";
 
-const sessionStorage = new SQLiteSessionStorage(
-  // SQLite database file path (relative to project root)
-  "./prisma/dev.db"
-);
+// Use sql.js — pure WASM, no native compilation needed.
+// Works on Windows, macOS, and Linux without Visual Studio or any build tools.
+const shopifySessionStorage = new SqlJsSessionStorage("./prisma/dev.db");
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY!,
   apiSecretKey: process.env.SHOPIFY_API_SECRET!,
   appUrl: process.env.SHOPIFY_APP_URL!,
   scopes: ["read_products", "read_themes", "read_content"],
-  sessionStorage,
+  sessionStorage: shopifySessionStorage,
   future: {
-    v3_authenticatePublic: true,
-    v3_lineItemBilling: true,
     unstable_newEmbeddedAuthStrategy: true,
   },
 });
