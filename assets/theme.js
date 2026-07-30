@@ -66,7 +66,7 @@
   }
 
   // ============================================================
-  // Cart Drawer
+  // Cart Drawer (Enhanced — AJAX fetch, quantity, free shipping)
   // ============================================================
   var CartDrawer = {
     drawer: null,
@@ -74,6 +74,8 @@
     closeButtons: null,
     toggleButtons: null,
     isOpen: false,
+    isLoading: false,
+    freeShippingThreshold: 0,
 
     init: function () {
       this.drawer = qs('#CartDrawer');
@@ -83,7 +85,15 @@
       this.closeButtons = qsa('[data-cart-close]');
       this.toggleButtons = qsa('[data-cart-toggle]');
 
+      var solaire = window.SOLAIRE || {};
+      this.freeShippingThreshold = parseInt(
+        solaire.freeShippingThreshold ||
+        (this.drawer.getAttribute('data-free-shipping-threshold') || '10000'),
+        10
+      );
+
       this.bindEvents();
+      this.bindDelegatedEvents();
       trapFocus(this.drawer);
     },
 
@@ -121,12 +131,55 @@
       });
     },
 
+    bindDelegatedEvents: function () {
+      var self = this;
+      var inner = qs('.cart-drawer__inner', this.drawer);
+      if (!inner) return;
+
+      inner.addEventListener('click', function (e) {
+        var minusBtn = e.target.closest('[data-cart-minus]');
+        if (minusBtn) {
+          e.preventDefault();
+          var key = minusBtn.getAttribute('data-line-key');
+          var currentVal = parseInt(minusBtn.getAttribute('data-current-qty'), 10) || 0;
+          self.updateQuantity(key, currentVal - 1);
+          return;
+        }
+
+        var plusBtn = e.target.closest('[data-cart-plus]');
+        if (plusBtn) {
+          e.preventDefault();
+          var key = plusBtn.getAttribute('data-line-key');
+          var currentVal = parseInt(plusBtn.getAttribute('data-current-qty'), 10) || 0;
+          self.updateQuantity(key, currentVal + 1);
+          return;
+        }
+
+        var removeBtn = e.target.closest('[data-cart-remove-item]');
+        if (removeBtn) {
+          e.preventDefault();
+          var key = removeBtn.getAttribute('data-line-key');
+          self.updateQuantity(key, 0);
+          return;
+        }
+
+        var contLink = e.target.closest('[data-cart-continue]');
+        if (contLink) {
+          self.close();
+          return;
+        }
+      });
+    },
+
     open: function () {
+      var self = this;
       this.drawer.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('drawer-open');
       this.isOpen = true;
 
-      // Focus first focusable element
+      this.fetchCart();
+
       var firstFocusable = qs('button, a[href]', this.drawer);
       if (firstFocusable) {
         setTimeout(function () {
@@ -138,7 +191,231 @@
     close: function () {
       this.drawer.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
+      document.body.classList.remove('drawer-open');
       this.isOpen = false;
+    },
+
+    fetchCart: function () {
+      var self = this;
+      if (this.isLoading) return;
+
+      var contentEl = qs('.cart-drawer__content', this.drawer);
+      if (!contentEl) return;
+
+      this.isLoading = true;
+
+      fetch('/cart.js')
+        .then(function (res) { return res.json(); })
+        .then(function (cart) {
+          var html = self.buildCartHTML(cart);
+          contentEl.innerHTML = html;
+          self.updateBadge(cart.item_count);
+          self.updateFreeShippingBar(cart.total_price);
+        })
+        .catch(function (err) {
+          console.error('[Solaire] Cart fetch error:', err);
+        })
+        .finally(function () {
+          self.isLoading = false;
+        });
+    },
+
+    buildCartHTML: function (cart) {
+      var self = this;
+      var html = '';
+
+      // Free shipping progress bar
+      html += '<div class="cart-drawer__progress-wrapper">';
+      html += '<div class="cart-drawer__progress-header">';
+      var remaining = self.freeShippingThreshold - cart.total_price;
+      if (remaining > 0) {
+        html += '<span class="cart-drawer__progress-text">You\'re ' + self.formatMoney(remaining) + ' away from free shipping.</span>';
+      } else {
+        html += '<span class="cart-drawer__progress-text cart-drawer__progress-text--achieved">You qualify for free shipping!</span>';
+      }
+      html += '<span class="cart-drawer__progress-icon">\u2713</span>';
+      html += '</div>';
+      var fillPct = self.freeShippingThreshold > 0 ? Math.min(100, Math.round((cart.total_price / self.freeShippingThreshold) * 100)) : 0;
+      var barClass = remaining <= 0 ? ' cart-drawer__progress-bar--achieved' : '';
+      html += '<div class="cart-drawer__progress-bar' + barClass + '">';
+      html += '<div class="cart-drawer__progress-fill" style="width:' + fillPct + '%"></div>';
+      html += '</div>';
+      html += '</div>';
+
+      if (cart.items && cart.items.length > 0) {
+        html += '<ul class="cart-items" role="list">';
+        for (var i = 0; i < cart.items.length; i++) {
+          html += self.buildCartItemHTML(cart.items[i]);
+        }
+        html += '</ul>';
+
+        // Cart notes
+        html += '<details class="cart-notes">';
+        html += '<summary class="cart-notes__toggle">Order notes <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l5 5 5-5"/></svg></summary>';
+        html += '<textarea class="cart-notes__textarea" name="note" form="CartDrawerForm" placeholder="Special instructions for your order\u2026"></textarea>';
+        html += '</details>';
+
+        // Footer
+        html += '<div class="cart-drawer__footer">';
+        html += '<div class="cart-drawer__subtotal">';
+        html += '<span class="cart-drawer__subtotal-label">Subtotal</span>';
+        html += '<span class="cart-drawer__subtotal-value">' + self.formatMoney(cart.total_price) + '</span>';
+        html += '</div>';
+        html += '<p class="cart-drawer__shipping-note">Shipping &amp; taxes calculated at checkout</p>';
+        html += '<form id="CartDrawerForm" action="/cart" method="post" class="cart-drawer__form">';
+        html += '<button type="submit" name="checkout" class="cart-drawer__checkout-btn">';
+        html += '<span>Checkout</span>';
+        html += '<span class="cart-drawer__checkout-arrow">&rarr;</span>';
+        html += '</button>';
+        html += '</form>';
+        html += '<a href="/collections/all" class="cart-drawer__continue-shopping" data-cart-continue>Continue shopping</a>';
+        html += '</div>';
+      } else {
+        // Empty state
+        html += '<div class="cart-empty">';
+        html += '<div class="cart-empty__icon">';
+        html += '<svg class="cart-empty__svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>';
+        html += '</div>';
+        html += '<p class="cart-empty__message">Your cart is empty.</p>';
+        html += '<a href="/collections/all" class="btn btn--accent cart-empty__cta" data-cart-continue>Continue shopping</a>';
+        html += '</div>';
+      }
+
+      return html;
+    },
+
+    buildCartItemHTML: function (item) {
+      var html = '';
+      html += '<li class="cart-item" data-line-key="' + this.escapeAttr(item.key) + '">';
+
+      html += '<div class="cart-item__image-wrapper">';
+      html += '<a href="' + this.escapeAttr(item.url) + '" class="cart-item__image-link">';
+      if (item.image) {
+        html += '<img class="cart-item__image" src="' + this.escapeAttr(item.image) + '" alt="' + this.escapeAttr(item.product_title) + '" width="80" height="80" loading="lazy">';
+      } else {
+        html += '<div class="cart-item__image-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>';
+      }
+      html += '</a>';
+      html += '</div>';
+
+      html += '<div class="cart-item__details">';
+      html += '<div class="cart-item__header-row">';
+      html += '<a href="' + this.escapeAttr(item.url) + '" class="cart-item__title">' + this.escapeHtml(item.product_title) + '</a>';
+      html += '<button type="button" class="cart-item__remove" data-cart-remove-item data-line-key="' + this.escapeAttr(item.key) + '" aria-label="Remove item"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15"/></svg></button>';
+      html += '</div>';
+      if (item.variant_title) {
+        html += '<p class="cart-item__variant">' + this.escapeHtml(item.variant_title) + '</p>';
+      }
+
+      html += '<div class="cart-item__bottom-row">';
+      html += '<div class="cart-item__quantity">';
+      html += '<button type="button" class="cart-item__qty-btn" data-cart-minus data-line-key="' + this.escapeAttr(item.key) + '" data-current-qty="' + item.quantity + '" aria-label="Decrease quantity"' + (item.quantity <= 1 ? ' disabled' : '') + '><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15"/></svg></button>';
+      html += '<span class="cart-item__qty-value">' + item.quantity + '</span>';
+      html += '<button type="button" class="cart-item__qty-btn cart-item__qty-btn--plus" data-cart-plus data-line-key="' + this.escapeAttr(item.key) + '" data-current-qty="' + item.quantity + '" aria-label="Increase quantity">+</button>';
+      html += '</div>';
+      html += '<div class="cart-item__line-price">';
+      if (item.original_line_price && item.original_line_price > item.final_line_price) {
+        html += '<span class="cart-item__compare-at">' + this.formatMoney(item.original_line_price) + '</span>';
+      }
+      html += '<span class="cart-item__final-price">' + this.formatMoney(item.final_line_price) + '</span>';
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+
+      html += '</li>';
+      return html;
+    },
+
+    updateQuantity: function (lineKey, newQty) {
+      var self = this;
+      var body = JSON.stringify({ id: lineKey, quantity: newQty });
+
+      fetch('/cart/change.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (cart) {
+          if (newQty === 0) {
+            var itemEl = qs('.cart-item[data-line-key="' + CSS.escape(lineKey) + '"]', self.drawer);
+            if (itemEl) {
+              itemEl.classList.add('cart-item--removing');
+              itemEl.addEventListener('animationend', function handler() {
+                itemEl.removeEventListener('animationend', handler);
+                if (itemEl.parentNode) itemEl.parentNode.removeChild(itemEl);
+                self.refreshCartUI(cart);
+              });
+              return;
+            }
+          }
+          self.refreshCartUI(cart);
+        })
+        .catch(function (err) {
+          console.error('[Solaire] Cart update error:', err);
+        });
+    },
+
+    refreshCartUI: function (cart) {
+      var contentEl = qs('.cart-drawer__content', this.drawer);
+      if (!contentEl) return;
+
+      var html = this.buildCartHTML(cart);
+      contentEl.innerHTML = html;
+      this.updateBadge(cart.item_count);
+      this.updateFreeShippingBar(cart.total_price);
+    },
+
+    updateBadge: function (count) {
+      var counts = qsa('.site-header__cart-count, [data-cart-count]');
+      counts.forEach(function (el) {
+        el.setAttribute('data-cart-count', count);
+        el.textContent = count;
+      });
+    },
+
+    updateFreeShippingBar: function (totalPrice) {
+      var wrapper = qs('.cart-drawer__progress-wrapper', this.drawer);
+      if (!wrapper) return;
+
+      var fill = qs('.cart-drawer__progress-fill', wrapper);
+      var textEl = qs('.cart-drawer__progress-text', wrapper);
+      var bar = qs('.cart-drawer__progress-bar', wrapper);
+
+      if (!fill) return;
+
+      var remaining = this.freeShippingThreshold - totalPrice;
+      var fillPct = this.freeShippingThreshold > 0 ? Math.min(100, Math.round((totalPrice / this.freeShippingThreshold) * 100)) : 0;
+
+      fill.style.width = fillPct + '%';
+
+      if (remaining <= 0) {
+        if (textEl) {
+          textEl.classList.add('cart-drawer__progress-text--achieved');
+          textEl.textContent = 'You qualify for free shipping!';
+        }
+        if (bar) bar.classList.add('cart-drawer__progress-bar--achieved');
+      } else {
+        if (textEl) {
+          textEl.classList.remove('cart-drawer__progress-text--achieved');
+          textEl.textContent = 'You\'re ' + this.formatMoney(remaining) + ' away from free shipping.';
+        }
+        if (bar) bar.classList.remove('cart-drawer__progress-bar--achieved');
+      }
+    },
+
+    formatMoney: function (cents) {
+      return '$' + (cents / 100).toFixed(2);
+    },
+
+    escapeHtml: function (str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    },
+
+    escapeAttr: function (str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
   };
 
@@ -1661,7 +1938,8 @@
 
     // Expose for external use
     window.SOLAIRE = SOLAIRE;
-    SOLAIRE.cartDrawer = CartDrawer;
+    window.Solaire = SOLAIRE;
+    SOLAIRE.CartDrawer = CartDrawer;
     SOLAIRE.mobileNav = MobileNav;
     SOLAIRE.searchOverlay = SearchOverlay;
     SOLAIRE.heroCarousel = HeroCarousel;

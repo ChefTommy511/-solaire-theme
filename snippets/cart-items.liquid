@@ -1,101 +1,173 @@
 {%- comment -%}
   Solaire Theme — Cart Items Snippet
   Renders the cart contents for both drawer and page views.
+  Enhanced to match new CSS class structure.
 {%- endcomment -%}
 
+{%- liquid
+  assign free_shipping_threshold = settings.cart_free_shipping_threshold | default: 10000
+-%}
+
 {%- if cart.item_count > 0 -%}
+  {%- comment -%} Free shipping progress bar {%- endcomment -%}
+  <div class="cart-drawer__progress-wrapper">
+    <div class="cart-drawer__progress-header">
+      {%- assign remaining = free_shipping_threshold | minus: cart.total_price -%}
+      {%- if remaining > 0 -%}
+        <span class="cart-drawer__progress-text">
+          {{ 'cart.general.free_shipping_remaining' | t: amount: remaining | money }}
+        </span>
+      {%- else -%}
+        <span class="cart-drawer__progress-text cart-drawer__progress-text--achieved">
+          {{ 'cart.general.free_shipping_achieved' | t }}
+        </span>
+      {%- endif -%}
+      <span class="cart-drawer__progress-icon">&#10003;</span>
+    </div>
+    {%- assign fill_pct = 0 -%}
+    {%- if free_shipping_threshold > 0 -%}
+      {%- assign fill_pct = cart.total_price | times: 100 | divided_by: free_shipping_threshold -%}
+      {%- if fill_pct > 100 -%}{%- assign fill_pct = 100 -%}{%- endif -%}
+    {%- endif -%}
+    <div class="cart-drawer__progress-bar{% if remaining <= 0 %} cart-drawer__progress-bar--achieved{% endif %}">
+      <div class="cart-drawer__progress-fill" style="width: {{ fill_pct }}%"></div>
+    </div>
+  </div>
+
   <ul class="cart-items" role="list">
     {%- for item in cart.items -%}
-      <li class="cart-item" data-line="{{ forloop.index }}">
-        <div class="cart-item__image">
-          {%- if item.image -%}
-            <img
-              src="{{ item.image | image_url: width: 150 }}"
-              alt="{{ item.title | escape }}"
-              width="75"
-              height="75"
-              loading="lazy"
-            >
-          {%- endif -%}
+      <li class="cart-item" data-line-key="{{ item.key }}">
+        {%- comment -%} Image {%- endcomment -%}
+        <div class="cart-item__image-wrapper">
+          <a href="{{ item.url }}" class="cart-item__image-link">
+            {%- if item.image != blank -%}
+              <img
+                class="cart-item__image"
+                src="{{ item.image | image_url: width: 160 }}"
+                alt="{{ item.title | escape }}"
+                width="80"
+                height="80"
+                loading="lazy"
+              >
+            {%- else -%}
+              <div class="cart-item__image-placeholder">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="M21 15l-5-5L5 21"/>
+                </svg>
+              </div>
+            {%- endif -%}
+          </a>
         </div>
 
+        {%- comment -%} Details {%- endcomment -%}
         <div class="cart-item__details">
-          <h3 class="cart-item__title">
-            <a href="{{ item.url }}">{{ item.product.title | escape }}</a>
-          </h3>
+          <div class="cart-item__header-row">
+            <a href="{{ item.url }}" class="cart-item__title">
+              {{- item.product.title | escape -}}
+            </a>
+            <a
+              href="/cart/change?line={{ forloop.index }}&quantity=0"
+              class="cart-item__remove"
+              data-cart-remove-item
+              data-line-key="{{ item.key }}"
+              aria-label="{{ 'cart.general.remove' | t: title: item.title | escape }}"
+            >
+              <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 5l10 10M15 5L5 15"/>
+              </svg>
+            </a>
+          </div>
 
-          {%- if item.product.has_only_default_variant == false -%}
-            <p class="cart-item__variant">{{ item.variant.title | escape }}</p>
+          {%- if item.variant_title != blank and item.product.has_only_default_variant == false -%}
+            <p class="cart-item__variant">{{ item.variant_title | escape }}</p>
           {%- endif -%}
 
-          <div class="cart-item__price">
-            {%- render 'price', product: item.product -%}
-          </div>
+          <div class="cart-item__bottom-row">
+            {%- comment -%} Quantity controls {%- endcomment -%}
+            <div class="cart-item__quantity">
+              <a
+                href="/cart/change?line={{ forloop.index }}&quantity={{ item.quantity | minus: 1 }}"
+                class="cart-item__qty-btn"
+                data-cart-minus
+                data-line-key="{{ item.key }}"
+                data-current-qty="{{ item.quantity }}"
+                aria-label="{{ 'products.product.decrease_quantity' | t }}"
+                {% if item.quantity <= 1 %}disabled aria-disabled="true"{% endif %}
+              >
+                <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 5l10 10M15 5L5 15"/>
+                </svg>
+              </a>
+              <span class="cart-item__qty-value">{{ item.quantity }}</span>
+              <a
+                href="/cart/change?line={{ forloop.index }}&quantity={{ item.quantity | plus: 1 }}"
+                class="cart-item__qty-btn cart-item__qty-btn--plus"
+                data-cart-plus
+                data-line-key="{{ item.key }}"
+                data-current-qty="{{ item.quantity }}"
+                aria-label="{{ 'products.product.increase_quantity' | t }}"
+              >+</a>
+            </div>
 
-          <div class="cart-item__quantity">
-            <label for="Quantity-{{ forloop.index }}" class="visually-hidden">
-              {{ 'cart.general.quantity' | t }}
-            </label>
-            <input
-              type="number"
-              id="Quantity-{{ forloop.index }}"
-              name="updates[]"
-              value="{{ item.quantity }}"
-              min="0"
-              class="cart-item__qty-input"
-              data-cart-quantity
-              data-line="{{ forloop.index }}"
-            >
+            {%- comment -%} Line price {%- endcomment -%}
+            <div class="cart-item__line-price">
+              {%- if item.original_line_price > item.final_line_price -%}
+                <span class="cart-item__compare-at">{{ item.original_line_price | money }}</span>
+              {%- endif -%}
+              <span class="cart-item__final-price">{{ item.final_line_price | money }}</span>
+            </div>
           </div>
         </div>
-
-        <button
-          type="button"
-          class="cart-item__remove"
-          data-cart-remove
-          data-line="{{ forloop.index }}"
-          aria-label="{{ 'cart.general.remove' | t: title: item.title | escape }}"
-        >
-          {%- render 'icon-close' -%}
-        </button>
       </li>
     {%- endfor -%}
   </ul>
 
-  <div class="cart-footer">
-    <div class="cart-footer__subtotal">
-      <span>{{ 'cart.general.subtotal' | t }}</span>
-      <span>{{ cart.total_price | money }}</span>
+  {%- comment -%} Notes {%- endcomment -%}
+  <details class="cart-notes">
+    <summary class="cart-notes__toggle">
+      {{ 'cart.general.notes' | t }}
+      <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M5 8l5 5 5-5"/>
+      </svg>
+    </summary>
+    <textarea
+      class="cart-notes__textarea"
+      name="note"
+      form="CartDrawerForm"
+      placeholder="{{ 'cart.general.notes_placeholder' | t }}"
+    >{{ cart.note }}</textarea>
+  </details>
+
+  {%- comment -%} Footer {%- endcomment -%}
+  <div class="cart-drawer__footer">
+    <div class="cart-drawer__subtotal">
+      <span class="cart-drawer__subtotal-label">{{ 'cart.general.subtotal' | t }}</span>
+      <span class="cart-drawer__subtotal-value">{{ cart.total_price | money }}</span>
     </div>
-
-    {%- if settings.cart_free_shipping_threshold != blank -%}
-      {%- assign threshold = settings.cart_free_shipping_threshold | times: 100 -%}
-      {%- if cart.total_price < threshold -%}
-        {%- assign remaining = threshold | minus: cart.total_price -%}
-        <p class="cart-footer__shipping-message">
-          {{ 'cart.general.free_shipping_remaining' | t: amount: remaining | money }}
-        </p>
-      {%- else -%}
-        <p class="cart-footer__shipping-message cart-footer__shipping-message--achieved">
-          {{ 'cart.general.free_shipping_achieved' | t }}
-        </p>
-      {%- endif -%}
-    {%- endif -%}
-
-    <a href="{{ routes.cart_url }}" class="btn btn--primary cart-footer__view-cart">
-      {{ 'cart.general.view_cart' | t }}
-    </a>
-
-    <form action="{{ routes.cart_url }}" method="post">
-      <button type="submit" name="checkout" class="btn btn--accent cart-footer__checkout">
-        {{ 'cart.general.checkout' | t }}
+    <p class="cart-drawer__shipping-note">{{ 'cart.general.shipping_at_checkout' | t }}</p>
+    <form id="CartDrawerForm" action="{{ routes.cart_url }}" method="post" class="cart-drawer__form">
+      <button type="submit" name="checkout" class="cart-drawer__checkout-btn">
+        <span>{{ 'cart.general.checkout' | t }}</span>
+        <span class="cart-drawer__checkout-arrow">&rarr;</span>
       </button>
     </form>
+    <a href="{{ routes.all_products_collection_url }}" class="cart-drawer__continue-shopping" data-cart-continue>
+      {{- 'cart.general.continue_shopping' | t -}}
+    </a>
   </div>
 {%- else -%}
   <div class="cart-empty">
+    <div class="cart-empty__icon">
+      <svg class="cart-empty__svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="9" cy="21" r="1"/>
+        <circle cx="20" cy="21" r="1"/>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+      </svg>
+    </div>
     <p class="cart-empty__message">{{ 'cart.general.empty' | t }}</p>
-    <a href="{{ routes.all_products_collection_url }}" class="btn btn--primary">
+    <a href="{{ routes.all_products_collection_url }}" class="btn btn--accent cart-empty__cta">
       {{ 'cart.general.continue_shopping' | t }}
     </a>
   </div>

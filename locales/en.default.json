@@ -348,6 +348,24 @@
           "label": "Text color"
         }
       }
+    },
+    "main-cart": {
+      "name": "Cart page",
+      "presets": {
+        "name": "Cart page"
+      },
+      "settings": {
+        "show_notes": {
+          "label": "Show order notes"
+        },
+        "show_recommendations": {
+          "label": "Show product recommendations"
+        },
+        "recommendations_collection": {
+          "label": "Recommendations collection",
+          "info": "Products from this collection will be shown below the cart."
+        }
+      }
     }
   },
   "products": {
@@ -408,7 +426,7 @@
   },
   "cart": {
     "general": {
-      "title": "Your cart",
+      "title": "Shopping Cart",
       "empty": "Your cart is empty.",
       "subtotal": "Subtotal",
       "view_cart": "View cart",
@@ -416,6 +434,7 @@
       "continue_shopping": "Continue shopping",
       "quantity": "Quantity",
       "remove": "Remove {{ title }}",
+      "remove_item": "Remove",
       "item_count": {
         "one": "{{ count }} item",
         "other": "{{ count }} items"
@@ -425,8 +444,11 @@
       "notes": "Order notes",
       "notes_placeholder": "Special instructions for your order…",
       "shipping_estimate": "Estimate shipping",
+      "shipping_at_checkout": "Shipping & taxes calculated at checkout",
+      "order_summary": "Order summary",
       "update": "Update cart",
-      "error": "There was an error updating your cart. Please try again."
+      "error": "There was an error updating your cart. Please try again.",
+      "you_might_also_like": "You might also like"
     }
   },
   "customer": {

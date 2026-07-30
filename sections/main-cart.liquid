@@ -1,0 +1,263 @@
+{%- comment -%}
+  Solaire Theme — Main Cart Section
+  Full cart page with item list, notes, summary, checkout, and recommendations.
+{%- endcomment -%}
+
+{%- liquid
+  assign show_notes = section.settings.show_notes | default: true
+  assign show_recommendations = section.settings.show_recommendations | default: true
+  assign recommendations_collection = section.settings.recommendations_collection
+  assign free_shipping_threshold = settings.cart_free_shipping_threshold | default: 10000
+-%}
+
+<div class="main-cart page-width" data-section-id="{{ section.id }}">
+  {%- comment -%} Header {%- endcomment -%}
+  <header class="main-cart__header">
+    <h1 class="main-cart__title">{{ 'cart.general.title' | t }}</h1>
+    {%- if cart.item_count > 0 -%}
+      <p class="main-cart__item-count">
+        {{ 'cart.general.item_count' | t: count: cart.item_count }}
+      </p>
+    {%- endif -%}
+  </header>
+
+  {%- if cart.item_count > 0 -%}
+    <div class="main-cart__grid">
+      {%- comment -%} Items column {%- endcomment -%}
+      <div class="main-cart__items">
+        {%- comment -%} Free shipping progress {%- endcomment -%}
+        <div class="cart-drawer__progress-wrapper">
+          <div class="cart-drawer__progress-header">
+            {%- assign remaining = free_shipping_threshold | minus: cart.total_price -%}
+            {%- if remaining > 0 -%}
+              <span class="cart-drawer__progress-text">
+                {{ 'cart.general.free_shipping_remaining' | t: amount: remaining | money }}
+              </span>
+            {%- else -%}
+              <span class="cart-drawer__progress-text cart-drawer__progress-text--achieved">
+                {{ 'cart.general.free_shipping_achieved' | t }}
+              </span>
+            {%- endif -%}
+            <span class="cart-drawer__progress-icon">&#10003;</span>
+          </div>
+          {%- assign fill_pct = 0 -%}
+          {%- if free_shipping_threshold > 0 -%}
+            {%- assign fill_pct = cart.total_price | times: 100 | divided_by: free_shipping_threshold -%}
+            {%- if fill_pct > 100 -%}{%- assign fill_pct = 100 -%}{%- endif -%}
+          {%- endif -%}
+          <div class="cart-drawer__progress-bar{% if remaining <= 0 %} cart-drawer__progress-bar--achieved{% endif %}">
+            <div class="cart-drawer__progress-fill" style="width: {{ fill_pct }}%"></div>
+          </div>
+        </div>
+
+        {%- comment -%} Cart items list {%- endcomment -%}
+        <ul class="cart-items" role="list">
+          {%- for item in cart.items -%}
+            <li class="cart-item cart-item--page" data-line-key="{{ item.key }}">
+              {%- comment -%} Image {%- endcomment -%}
+              <div class="cart-item__image-wrapper cart-item__image-wrapper--page">
+                <a href="{{ item.url }}" class="cart-item__image-link">
+                  {%- if item.image != blank -%}
+                    <img
+                      class="cart-item__image"
+                      src="{{ item.image | image_url: width: 240 }}"
+                      srcset="{{ item.image | image_url: width: 120 }} 120w, {{ item.image | image_url: width: 240 }} 240w"
+                      alt="{{ item.title | escape }}"
+                      width="120"
+                      height="120"
+                      loading="lazy"
+                    >
+                  {%- else -%}
+                    <div class="cart-item__image-placeholder cart-item__image-placeholder--page">
+                      {{- 'product-1' | placeholder_svg_tag: 'placeholder-svg' -}}
+                    </div>
+                  {%- endif -%}
+                </a>
+              </div>
+
+              {%- comment -%} Details {%- endcomment -%}
+              <div class="cart-item__details cart-item__details--page">
+                <div class="cart-item__header-row">
+                  <a href="{{ item.url }}" class="cart-item__title cart-item__title--page">
+                    {{- item.product.title | escape -}}
+                  </a>
+                </div>
+
+                {%- if item.variant_title != blank and item.product.has_only_default_variant == false -%}
+                  <p class="cart-item__variant">{{ item.variant_title | escape }}</p>
+                {%- endif -%}
+
+                {%- if item.properties != empty -%}
+                  <ul class="cart-item__properties" role="list">
+                    {%- for property in item.properties -%}
+                      {%- assign first_char = property.first | slice: 0 -%}
+                      {%- if property.last != blank and first_char != '_' -%}
+                        <li class="cart-item__property">
+                          <span class="cart-item__property-label">{{ property.first }}:</span>
+                          <span class="cart-item__property-value">{{ property.last }}</span>
+                        </li>
+                      {%- endif -%}
+                    {%- endfor -%}
+                  </ul>
+                {%- endif -%}
+
+                <div class="cart-item__bottom-row">
+                  {%- comment -%} Quantity {%- endcomment -%}
+                  <div class="cart-item__quantity">
+                    <a
+                      href="/cart/change?line={{ forloop.index }}&quantity={{ item.quantity | minus: 1 }}"
+                      class="cart-item__qty-btn"
+                      aria-label="{{ 'products.product.decrease_quantity' | t }}"
+                      {% if item.quantity <= 1 %}disabled aria-disabled="true"{% endif %}
+                    >
+                      <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l10 10M15 5L5 15"/></svg>
+                    </a>
+                    <span class="cart-item__qty-value">{{ item.quantity }}</span>
+                    <a
+                      href="/cart/change?line={{ forloop.index }}&quantity={{ item.quantity | plus: 1 }}"
+                      class="cart-item__qty-btn cart-item__qty-btn--plus"
+                      aria-label="{{ 'products.product.increase_quantity' | t }}"
+                    >+</a>
+                  </div>
+
+                  {%- comment -%} Line price + Remove {%- endcomment -%}
+                  <div class="cart-item__line-price">
+                    {%- if item.original_line_price > item.final_line_price -%}
+                      <span class="cart-item__compare-at">{{ item.original_line_price | money }}</span>
+                    {%- endif -%}
+                    <span class="cart-item__final-price">{{ item.final_line_price | money }}</span>
+                  </div>
+
+                  <a
+                    href="/cart/change?line={{ forloop.index }}&quantity=0"
+                    class="cart-item__remove cart-item__remove--page"
+                    aria-label="{{ 'cart.general.remove' | t: title: item.title | escape }}"
+                  >
+                    {{- 'cart.general.remove_item' | t -}}
+                  </a>
+                </div>
+              </div>
+            </li>
+          {%- endfor -%}
+        </ul>
+
+        {%- comment -%} Cart notes (collapsible) {%- endcomment -%}
+        {%- if show_notes -%}
+          <details class="cart-notes cart-notes--page">
+            <summary class="cart-notes__toggle">
+              {{ 'cart.general.notes' | t }}
+              <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l5 5 5-5"/></svg>
+            </summary>
+            <label for="CartNotes" class="cart-notes__label visually-hidden">
+              {{- 'cart.general.notes_placeholder' | t -}}
+            </label>
+            <textarea
+              id="CartNotes"
+              class="cart-notes__textarea"
+              name="note"
+              form="MainCartForm"
+              placeholder="{{ 'cart.general.notes_placeholder' | t }}"
+            >{{ cart.note }}</textarea>
+          </details>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} Sidebar — Order Summary {%- endcomment -%}
+      <aside class="main-cart__sidebar">
+        <div class="main-cart__summary">
+          <h2 class="main-cart__summary-title">{{ 'cart.general.order_summary' | t }}</h2>
+
+          <div class="main-cart__summary-row">
+            <span>{{ 'cart.general.subtotal' | t }}</span>
+            <span class="cart-drawer__subtotal-value">{{ cart.total_price | money }}</span>
+          </div>
+
+          <p class="cart-drawer__shipping-note">{{ 'cart.general.shipping_at_checkout' | t }}</p>
+
+          <form id="MainCartForm" action="{{ routes.cart_url }}" method="post">
+            <button type="submit" name="checkout" class="cart-drawer__checkout-btn">
+              <span>{{ 'cart.general.checkout' | t }}</span>
+              <span class="cart-drawer__checkout-arrow">&rarr;</span>
+            </button>
+          </form>
+
+          <a href="{{ routes.all_products_collection_url }}" class="cart-drawer__continue-shopping">
+            {{- 'cart.general.continue_shopping' | t -}}
+          </a>
+        </div>
+      </aside>
+    </div>
+
+    {%- comment -%} Featured collection recommendations {%- endcomment -%}
+    {%- if show_recommendations and recommendations_collection != blank -%}
+      {%- assign recs_collection = collections[recommendations_collection] -%}
+      {%- if recs_collection and recs_collection.products.size > 0 -%}
+        <div class="main-cart__recommendations">
+          <h2 class="main-cart__recommendations-title">
+            {{ 'cart.general.you_might_also_like' | t }}
+          </h2>
+          <div class="main-cart__recommendations-grid">
+            {%- for product in recs_collection.products limit: 4 -%}
+              {%- render 'product-card',
+                product: product,
+                context: 'recommendations',
+                show_secondary_image: true,
+                show_vendor: false,
+                show_color_swatches: false,
+                show_quick_add: false
+              -%}
+            {%- endfor -%}
+          </div>
+        </div>
+      {%- endif -%}
+    {%- endif -%}
+
+  {%- else -%}
+    {%- comment -%} Empty cart {%- endcomment -%}
+    <div class="cart-empty">
+      <div class="cart-empty__icon">
+        <svg class="cart-empty__svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="9" cy="21" r="1"/>
+          <circle cx="20" cy="21" r="1"/>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+        </svg>
+      </div>
+      <p class="cart-empty__message">{{ 'cart.general.empty' | t }}</p>
+      <a href="{{ routes.all_products_collection_url }}" class="btn btn--accent cart-empty__cta">
+        {{ 'cart.general.continue_shopping' | t }}
+      </a>
+    </div>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "t:sections.main-cart.name",
+  "class": "section-main-cart",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_notes",
+      "label": "t:sections.main-cart.settings.show_notes.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_recommendations",
+      "label": "t:sections.main-cart.settings.show_recommendations.label",
+      "default": true
+    },
+    {
+      "type": "collection",
+      "id": "recommendations_collection",
+      "label": "t:sections.main-cart.settings.recommendations_collection.label",
+      "info": "t:sections.main-cart.settings.recommendations_collection.info"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.main-cart.presets.name"
+    }
+  ]
+}
+{% endschema %}
