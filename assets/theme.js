@@ -1313,11 +1313,23 @@
 
       forms.forEach(function (form) {
         form.addEventListener('submit', function (e) {
-          var atcBtn = qs('[data-add-to-cart]', form.closest('.main-product'));
+          var mainProduct = form.closest('.main-product');
+          var atcBtn = qs('[data-add-to-cart]', mainProduct);
           if (atcBtn && !atcBtn.disabled) {
+            // Prevent double-submission
+            if (atcBtn.classList.contains('main-product__atc--loading')) {
+              e.preventDefault();
+              return;
+            }
             atcBtn.classList.add('main-product__atc--loading');
-            // Let the form submit normally — Shopify handles the AJAX
-            // The spinner provides visual feedback during submission
+            atcBtn.disabled = true;
+
+            // Remove loading state after timeout (form submits normally)
+            // Shopify handles the AJAX redirect or page reload
+            setTimeout(function () {
+              atcBtn.classList.remove('main-product__atc--loading');
+              atcBtn.disabled = false;
+            }, 5000);
           }
         });
       });
@@ -1916,6 +1928,76 @@
   };
 
   // ============================================================
+  // Back to Top Button
+  // ============================================================
+  var BackToTop = {
+    button: null,
+    threshold: 400,
+
+    init: function () {
+      this.button = qs('[data-back-to-top]');
+      if (!this.button) return;
+
+      var self = this;
+      window.addEventListener(
+        'scroll',
+        debounce(function () {
+          if (window.scrollY > self.threshold) {
+            self.button.classList.add('is-visible');
+          } else {
+            self.button.classList.remove('is-visible');
+          }
+        }, 100)
+      );
+
+      this.button.addEventListener('click', function () {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Set focus to main content after scrolling
+        var mainContent = document.getElementById('MainContent');
+        if (mainContent) {
+          setTimeout(function () {
+            mainContent.focus({ preventScroll: true });
+          }, 600);
+        }
+      });
+    }
+  };
+
+  // ============================================================
+  // Focus Return on Drawer Close
+  // ============================================================
+  var FocusReturn = {
+    init: function () {
+      // Cart drawer close — return focus
+      document.addEventListener('click', function (e) {
+        var closeBtn = e.target.closest('[data-cart-close]');
+        if (closeBtn) {
+          var cartToggle = qs('[data-cart-toggle]');
+          if (cartToggle) {
+            setTimeout(function () { cartToggle.focus(); }, 100);
+          }
+        }
+
+        var mobileNavClose = e.target.closest('[data-mobile-nav-close]');
+        if (mobileNavClose) {
+          var navToggle = qs('[data-mobile-nav-toggle]');
+          if (navToggle) {
+            setTimeout(function () { navToggle.focus(); }, 100);
+          }
+        }
+
+        var searchClose = e.target.closest('[data-search-close]');
+        if (searchClose) {
+          var searchToggle = qs('[data-search-toggle]');
+          if (searchToggle) {
+            setTimeout(function () { searchToggle.focus(); }, 100);
+          }
+        }
+      });
+    }
+  };
+
+  // ============================================================
   // Initialize Everything on DOM Ready
   // ============================================================
   function init() {
@@ -1935,6 +2017,8 @@
     StickyDetails.init();
     CopyLink.init();
     CollectionFilters.init();
+    BackToTop.init();
+    FocusReturn.init();
 
     // Expose for external use
     window.SOLAIRE = SOLAIRE;
