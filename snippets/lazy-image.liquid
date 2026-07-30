@@ -5,18 +5,16 @@
 
 {%- liquid
   assign image = image | default: nil
-  if image == nil
-    return
-  endif
-
-  assign sizes = sizes | default: '100vw'
-  assign class = class | default: ''
-  assign alt = alt | default: image.alt | default: ''
-  assign loading = loading | default: 'lazy'
-  assign fetchpriority = fetchpriority | default: 'auto'
-  assign width = image.width
-  assign height = image.height
-  assign aspect_ratio = image.aspect_ratio
+  unless image == nil
+    assign sizes = sizes | default: '100vw'
+    assign class = class | default: ''
+    assign alt = alt | default: image.alt | default: ''
+    assign loading = loading | default: 'lazy'
+    assign fetchpriority = fetchpriority | default: 'auto'
+    assign width = image.width
+    assign height = image.height
+    assign aspect_ratio = image.aspect_ratio
+  endunless
 -%}
 
 {%- if image != blank -%}

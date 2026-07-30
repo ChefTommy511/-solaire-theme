@@ -1,7 +1,7 @@
 {
-  "current": "Default",
+  "current": "Solaire",
   "presets": {
-    "Default": {
+    "Solaire": {
       "color_bg_primary": "#faf8f5",
       "color_bg_secondary": "#f3f0eb",
       "color_bg_dark": "#1a1a1a",
@@ -40,11 +40,11 @@
       "header_padding": "standard",
       "footer_show_social": true,
       "footer_show_newsletter": true,
-      "footer_newsletter_heading": "Stay in the loop",
-      "footer_newsletter_subtext": "Early access to new drops and exclusive offers.",
+      "footer_newsletter_heading": "<p>Stay in the loop</p>",
+      "footer_newsletter_subtext": "<p>Early access to new drops and exclusive offers.</p>",
       "footer_show_payment_icons": true,
       "footer_color_scheme": "dark",
-      "footer_copyright_text": "© {{ 'now' | date: '%Y' }} {{ shop.name }}. All rights reserved.",
+      "footer_copyright_text": "<p>© {{ 'now' | date: '%Y' }} {{ shop.name }}. All rights reserved.</p>",
       "footer_show_language_selector": true,
       "footer_show_currency_selector": true,
       "enable_image_zoom": true,
@@ -65,7 +65,7 @@
       "cart_show_notes": true,
       "cart_show_shipping_estimate": false,
       "cart_free_shipping_threshold": "100",
-      "cart_free_shipping_message": "Free shipping on orders over {{ settings.cart_free_shipping_threshold | money }}",
+      "cart_free_shipping_message": "<p>Free shipping on orders over {{ settings.cart_free_shipping_threshold | money }}</p>",
       "social_instagram_url": "https://instagram.com/solaireeyewear",
       "social_facebook_url": "https://facebook.com/solaireeyewear",
       "social_pinterest_url": "",

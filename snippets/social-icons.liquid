@@ -20,7 +20,8 @@
           rel="noopener noreferrer"
           aria-label="{{ 'general.social.platform_label' | t: platform: platform | capitalize }}"
         >
-          {%- render 'icon-' | append: platform -%}
+          {%- assign icon_snippet = 'icon-' | append: platform -%}
+          {%- render icon_snippet -%}
         </a>
       </li>
     {%- endif -%}

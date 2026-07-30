@@ -5,17 +5,15 @@
 
 {%- liquid
   assign product = product | default: nil
-  if product == nil
-    return
-  endif
+  unless product == nil
+    assign swatch_option = product.options_with_values | where: 'name', 'Color' | first
+    if swatch_option == nil
+      assign swatch_option = product.options_with_values | first
+    endif
 
-  assign swatch_option = product.options_with_values | where: 'name', 'Color' | first
-  if swatch_option == nil
-    assign swatch_option = product.options_with_values | first
-  endif
-
-  assign swatch_count = swatch_option.values.size
-  assign max_display = 4
+    assign swatch_count = swatch_option.values.size
+    assign max_display = 4
+  endunless
 -%}
 
 {%- if swatch_option != blank and swatch_count > 0 -%}

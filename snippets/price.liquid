@@ -5,20 +5,18 @@
 
 {%- liquid
   assign product = product | default: nil
-  if product == nil
-    return
-  endif
+  unless product == nil
+    assign target = product.selected_or_first_available_variant
+    assign compare_at_price = target.compare_at_price
+    assign price = target.price
+    assign on_sale = false
+    if compare_at_price > price
+      assign on_sale = true
+    endif
 
-  assign target = product.selected_or_first_available_variant
-  assign compare_at_price = target.compare_at_price
-  assign price = target.price
-  assign on_sale = false
-  if compare_at_price > price
-    assign on_sale = true
-  endif
-
-  assign money_price = price | money
-  assign money_compare = compare_at_price | money
+    assign money_price = price | money
+    assign money_compare = compare_at_price | money
+  endunless
 -%}
 
 <span class="price{% if on_sale %} price--on-sale{% endif %}{% unless product.available %} price--sold-out{% endunless %}">

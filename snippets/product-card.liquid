@@ -5,12 +5,11 @@
 
 {%- liquid
   assign product = product | default: nil
-  if product == nil
-    return
-  endif
-  assign first_image = product.featured_media.preview_image
-  assign second_image = product.media[1].preview_image | default: first_image
-  assign show_second_on_hover = section.settings.enable_image_hover | default: true
+  unless product == nil
+    assign first_image = product.featured_media.preview_image
+    assign second_image = product.media[1].preview_image | default: first_image
+    assign show_second_on_hover = section.settings.enable_image_hover | default: true
+  endunless
 -%}
 
 <div class="product-card" data-product-handle="{{ product.handle }}">
