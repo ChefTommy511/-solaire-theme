@@ -15,6 +15,9 @@
     "@shopify/app-bridge-react": "^4.1.0",
     "@shopify/shopify-app-remix": "^3.0.0",
     "@shopify/shopify-app-session-storage-sqlite": "^4.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^13.0.2",
+    "cheerio": "^1.2.0",
     "isbot": "^5.1.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
