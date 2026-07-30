@@ -93,7 +93,7 @@
     }
   },
   "presets": {
-    "Default": {
+    "Solaire": {
       "color_bg_primary": "#faf8f5",
       "color_bg_secondary": "#f3f0eb",
       "color_bg_dark": "#1a1a1a",
