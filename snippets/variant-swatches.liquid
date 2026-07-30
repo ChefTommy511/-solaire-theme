@@ -1,44 +1,129 @@
 {%- comment -%}
   Solaire Theme — Variant Swatches Snippet
-  Color/material swatch picker for product cards and product pages.
+  Enhanced circular swatch picker for product cards and product pages.
+  Supports color/image swatch types, tooltips, selected state with gold ring.
+  Used on both product cards (compact) and product pages (interactive variant selector).
 {%- endcomment -%}
 
 {%- liquid
   assign product = product | default: nil
-  unless product == nil
-    assign swatch_option = product.options_with_values | where: 'name', 'Color' | first
-    if swatch_option == nil
-      assign swatch_option = product.options_with_values | first
-    endif
+  if product == nil
+    return
+  endif
 
-    assign swatch_count = swatch_option.values.size
-    assign max_display = 4
-  endunless
+  assign context = context | default: 'card'
+  assign option_name = option_name | default: nil
+  assign current_value = current_value | default: nil
+  assign swatch_options = product.options_with_values
+
+  if option_name != nil
+    assign active_option = swatch_options | where: 'name', option_name | first
+  elsif context == 'card'
+    assign active_option = swatch_options | where: 'name', 'Color' | first
+    if active_option == nil
+      assign active_option = swatch_options | first
+    endif
+  endif
+
+  if active_option == nil
+    return
+  endif
+
+  assign swatch_count = active_option.values.size
+  assign max_display = 4
+  assign option_index = 'option' | append: active_option.position
 -%}
 
-{%- if swatch_option != blank and swatch_count > 0 -%}
-  <ul class="variant-swatches" role="list" aria-label="{{ 'products.product.color_options' | t }}">
-    {%- for value in swatch_option.values limit: max_display -%}
-      <li class="variant-swatches__item">
+{%- if swatch_count > 0 -%}
+  <fieldset
+    class="variant-swatches"
+    role="radiogroup"
+    {% if context == 'page' %}aria-label="{{ active_option.name | escape }}"{% else %}aria-label="{{ 'products.product.color_options' | t }}"{% endif %}
+    data-option-index="{{ active_option.position | minus: 1 }}"
+    data-option-name="{{ active_option.name | escape }}"
+  >
+    <legend class="visually-hidden">{{ active_option.name | escape }}</legend>
+
+    {%- for value in active_option.values -%}
+      {%- if context == 'card' and forloop.index > max_display -%}
+        {%- break -%}
+      {%- endif -%}
+
+      {%- liquid
+        assign swatch_id = 'swatch-' | append: section.id | append: '-' | append: active_option.position | append: '-' | append: forloop.index
+
+        if context == 'page'
+          assign variant = product.variants | where: option_index, value | first
+          assign available = variant.available
+          assign variant_id = variant.id
+        else
+          assign available = product.available
+        endif
+
+        assign is_selected = false
+        if context == 'page' and current_value == value
+          assign is_selected = true
+        endif
+
+        assign swatch_type = 'color'
+        if value.swatch.image != blank
+          assign swatch_type = 'image'
+        elsif value.swatch.color != blank
+          assign swatch_type = 'color'
+        endif
+
+        assign swatch_color = value.swatch.color | default: '#e0dcd5'
+        assign swatch_image = value.swatch.image | default: nil
+      -%}
+
+      <label
+        class="variant-swatches__label{% if is_selected %} variant-swatches__label--selected{% endif %}{% unless available %} variant-swatches__label--disabled{% endunless %}"
+        for="{{ swatch_id }}"
+        title="{{ value | escape }}{% unless available %} — {{ 'products.product.variant_unavailable' | t }}{% endunless %}"
+      >
+        <input
+          type="radio"
+          class="variant-swatches__input visually-hidden"
+          name="{{ active_option.name | handle }}-{{ section.id }}"
+          value="{{ value | escape }}"
+          id="{{ swatch_id }}"
+          {% if is_selected %}checked{% endif %}
+          {% unless available %}disabled{% endunless %}
+          {% if context == 'page' %}data-variant-id="{{ variant_id }}"{% endif %}
+          data-option-value="{{ value | escape }}"
+        >
+
         <span
           class="variant-swatches__swatch"
-          data-value="{{ value | handle }}"
-          title="{{ value | escape }}"
-          {% if value.swatch.color %}
-            style="background-color: {{ value.swatch.color }}"
+          {% if swatch_type == 'color' %}
+            style="background-color: {{ swatch_color }}"
+          {% elsif swatch_type == 'image' and swatch_image != blank %}
+            style="background-image: url('{{ swatch_image | image_url: width: 72 }}')"
           {% endif %}
+          aria-hidden="true"
         >
-          <span class="visually-hidden">{{ value | escape }}</span>
+          {%- if swatch_type == 'color' and swatch_color == blank -%}
+            <span class="variant-swatches__swatch-placeholder"></span>
+          {%- endif -%}
         </span>
-      </li>
+
+        <span class="visually-hidden">{{ value | escape }}</span>
+
+        {%- if context == 'page' -%}
+          <span class="variant-swatches__tooltip" aria-hidden="true">
+            {{ value | escape }}
+            {%- unless available -%}
+              <span class="variant-swatches__tooltip-unavailable">— {{ 'products.product.unavailable' | t }}</span>
+            {%- endunless -%}
+          </span>
+        {%- endif -%}
+      </label>
     {%- endfor -%}
 
-    {%- if swatch_count > max_display -%}
-      <li class="variant-swatches__item">
-        <span class="variant-swatches__more">
-          +{{ swatch_count | minus: max_display }}
-        </span>
-      </li>
+    {%- if context == 'card' and swatch_count > max_display -%}
+      <span class="variant-swatches__more" aria-hidden="true">
+        +{{ swatch_count | minus: max_display }}
+      </span>
     {%- endif -%}
-  </ul>
+  </fieldset>
 {%- endif -%}

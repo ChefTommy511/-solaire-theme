@@ -1,0 +1,21 @@
+# StoreVitals - Shopify Embedded App Configuration
+name = "StoreVitals"
+client_id = "env:SHOPIFY_API_KEY"
+application_url = "env:SHOPIFY_APP_URL"
+embedded = true
+
+[access_scopes]
+scopes = "read_products,read_themes,read_content"
+
+[auth]
+redirect_urls = [
+  "env:SHOPIFY_APP_URL/auth/callback",
+]
+
+[webhooks]
+api_version = "2024-10"
+
+[app_proxy]
+url = ""
+subpath = ""
+prefix = "apps"

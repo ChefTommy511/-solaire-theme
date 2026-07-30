@@ -1,22 +1,31 @@
 {%- comment -%}
   Solaire Theme — Price Snippet
-  Formatted price display with compare-at price and sale badge.
+  Enhanced price display with compare-at price, sale badge, and percentage-off display.
 {%- endcomment -%}
 
 {%- liquid
   assign product = product | default: nil
-  unless product == nil
-    assign target = product.selected_or_first_available_variant
-    assign compare_at_price = target.compare_at_price
-    assign price = target.price
-    assign on_sale = false
-    if compare_at_price > price
-      assign on_sale = true
-    endif
+  if product == nil
+    return
+  endif
 
-    assign money_price = price | money
-    assign money_compare = compare_at_price | money
-  endunless
+  assign target = product.selected_or_first_available_variant
+  assign compare_at_price = target.compare_at_price
+  assign price = target.price
+  assign on_sale = false
+  if compare_at_price > price
+    assign on_sale = true
+  endif
+
+  assign money_price = price | money
+  assign money_compare = compare_at_price | money
+
+  assign savings_percentage = 0
+  if on_sale and compare_at_price > 0
+    assign savings = compare_at_price | minus: price
+    assign savings_ratio = savings | times: 1.0 | divided_by: compare_at_price
+    assign savings_percentage = savings_ratio | times: 100 | round
+  endif
 -%}
 
 <span class="price{% if on_sale %} price--on-sale{% endif %}{% unless product.available %} price--sold-out{% endunless %}">
@@ -25,6 +34,12 @@
       <span class="visually-hidden">{{ 'products.product.regular_price' | t }}</span>
       <s>{{ money_compare }}</s>
     </span>
+
+    {%- if savings_percentage > 0 -%}
+      <span class="price__sale-badge" aria-label="{{ 'products.product.you_save_percent' | t: percent: savings_percentage }}">
+        {{- savings_percentage }}% {{ 'products.product.off' | t -}}
+      </span>
+    {%- endif -%}
   {%- endif -%}
 
   <span class="price__current">

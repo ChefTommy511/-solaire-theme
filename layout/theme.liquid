@@ -13,6 +13,22 @@
     {%- if settings.favicon != blank -%}
       <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
       <link rel="apple-touch-icon" href="{{ settings.favicon | image_url: width: 180, height: 180 }}">
+    {%- else -%}
+      <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕶</text></svg>">
+    {%- endif -%}
+
+    <!-- Font preloads & font-display: swap -->
+    {%- liquid
+      assign body_font = settings.font_body | default: 'inter'
+      assign heading_font = settings.font_heading | default: 'playfair'
+    -%}
+    {%- if heading_font == 'playfair' -%}
+      <link rel="preload" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" as="style">
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+    {%- endif -%}
+    {%- if body_font == 'inter' -%}
+      <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style">
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     {%- endif -%}
 
     <title>
@@ -32,11 +48,6 @@
     {%- if page_description -%}
       <meta name="description" content="{{ page_description | escape }}">
     {%- endif -%}
-
-    {%- liquid
-      assign body_font = settings.font_body
-      assign heading_font = settings.font_heading
-    -%}
 
     {%- style -%}
       :root {
@@ -142,6 +153,10 @@
 
   <body class="template-{{ template.name | handle }} template-{{ template.suffix | handle }}{% if template.suffix != blank %} template-{{ template.name }}-{{ template.suffix | handle }}{% endif %}">
 
+    <a class="skip-to-content-link visually-hidden" href="#MainContent">
+      {{ 'general.accessibility.skip_to_content' | t }}
+    </a>
+
     {%- section 'announcement-bar' -%}
     {%- section 'header' -%}
 
@@ -151,8 +166,16 @@
 
     {%- section 'footer' -%}
 
+    <!-- Back to top button -->
+    <button type="button" class="back-to-top" data-back-to-top aria-label="{{ 'general.accessibility.back_to_top' | t }}">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
     {%- if settings.cart_type == 'drawer' -%}
-      <div id="CartDrawer" class="cart-drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-label="{{ 'cart.general.title' | t }}">
+      {%- assign free_shipping_threshold = settings.cart_free_shipping_threshold | default: 10000 -%}
+      <div id="CartDrawer" class="cart-drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-label="{{ 'cart.general.title' | t }}" data-free-shipping-threshold="{{ free_shipping_threshold }}">
         <div class="cart-drawer__overlay" data-cart-close></div>
         <div class="cart-drawer__inner">
           <div class="cart-drawer__header">
@@ -161,7 +184,7 @@
               {%- render 'icon-close' -%}
             </button>
           </div>
-          <div class="cart-drawer__content" data-cart-items>
+          <div class="cart-drawer__content" data-cart-items aria-live="polite" aria-atomic="true">
             {%- render 'cart-items' -%}
           </div>
         </div>
@@ -169,7 +192,7 @@
     {%- endif -%}
 
     <!-- Mobile nav drawer -->
-    <div id="MobileNavDrawer" class="mobile-nav-drawer" aria-hidden="true">
+    <div id="MobileNavDrawer" class="mobile-nav-drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-label="{{ 'general.accessibility.main_nav' | t }}">
       <div class="mobile-nav-drawer__overlay" data-mobile-nav-close></div>
       <nav class="mobile-nav-drawer__inner" aria-label="{{ 'general.accessibility.main_nav' | t }}">
         <div class="mobile-nav-drawer__header">

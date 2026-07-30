@@ -1,47 +1,57 @@
 {%- comment -%}
   Solaire Theme — Image with Text Section
-  Side-by-side image and text block for brand storytelling.
+  Side-by-side image and text block for brand storytelling, craftsmanship details, and lens tech features.
 {%- endcomment -%}
 
 {%- liquid
   assign layout = section.settings.layout | default: 'image_left'
   assign image = section.settings.image
+  assign image_alt = section.settings.image_alt | default: image.alt | default: section.settings.heading | default: ''
+  assign heading = section.settings.heading
+  assign text = section.settings.text
+  assign button_text = section.settings.button_text
+  assign button_link = section.settings.button_link | default: '#'
+  assign content_alignment = section.settings.content_alignment | default: 'middle'
+  assign image_ratio = section.settings.image_ratio | default: '4-5'
+  assign image_fill = section.settings.image_fill
 -%}
 
-<section class="image-with-text section-spacing" data-section-id="{{ section.id }}">
+<section class="image-with-text section-spacing{% if section.settings.background != 'none' %} image-with-text--bg-{{ section.settings.background }}{% endif %}" data-section-id="{{ section.id }}">
   <div class="page-width">
-    <div class="image-with-text__wrapper image-with-text__wrapper--{{ layout }}">
-      <div class="image-with-text__media">
+    <div class="image-with-text__wrapper image-with-text__wrapper--{{ layout }} image-with-text__wrapper--content-{{ content_alignment }}">
+      <div class="image-with-text__media{% if image_fill %} image-with-text__media--fill{% endif %}">
         {%- if image != blank -%}
           {%- render 'lazy-image',
             image: image,
-            sizes: '(min-width: 768px) 50vw, 100vw',
-            class: 'image-with-text__image'
+            sizes: '(min-width: 1024px) 50vw, 100vw',
+            class: 'image-with-text__image',
+            alt: image_alt
           -%}
         {%- else -%}
-          <div class="image-with-text__placeholder">
+          <div class="image-with-text__placeholder image-with-text__placeholder--{{ image_ratio }}">
             {{ 'image' | placeholder_svg_tag: 'image-with-text__placeholder-svg' }}
           </div>
         {%- endif -%}
       </div>
 
       <div class="image-with-text__content">
-        {%- if section.settings.heading != blank -%}
-          <h2 class="image-with-text__heading">{{ section.settings.heading | escape }}</h2>
+        {%- if heading != blank -%}
+          <h2 class="image-with-text__heading h2">{{ heading | escape }}</h2>
         {%- endif -%}
 
-        {%- if section.settings.text != blank -%}
+        {%- if text != blank -%}
           <div class="image-with-text__text rte">
-            {{ section.settings.text }}
+            {{ text }}
           </div>
         {%- endif -%}
 
-        {%- if section.settings.button_text != blank -%}
+        {%- if button_text != blank -%}
           <a
-            href="{{ section.settings.button_link | default: '#' }}"
-            class="btn btn--{{ section.settings.button_style }}"
+            href="{{ button_link }}"
+            class="btn btn--outline image-with-text__cta"
           >
-            {{ section.settings.button_text | escape }}
+            {{ button_text | escape }}
+            {%- render 'icon-arrow-right' -%}
           </a>
         {%- endif -%}
       </div>
@@ -60,6 +70,30 @@
       "label": "t:sections.image-with-text.settings.image.label"
     },
     {
+      "type": "text",
+      "id": "image_alt",
+      "label": "t:sections.image-with-text.settings.image_alt.label",
+      "info": "t:sections.image-with-text.settings.image_alt.info"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:sections.image-with-text.settings.image_ratio.label",
+      "options": [
+        { "value": "3-2", "label": "t:sections.image-with-text.settings.image_ratio.options.3-2" },
+        { "value": "1-1", "label": "t:sections.image-with-text.settings.image_ratio.options.1-1" },
+        { "value": "4-5", "label": "t:sections.image-with-text.settings.image_ratio.options.4-5" },
+        { "value": "2-3", "label": "t:sections.image-with-text.settings.image_ratio.options.2-3" }
+      ],
+      "default": "4-5"
+    },
+    {
+      "type": "checkbox",
+      "id": "image_fill",
+      "label": "t:sections.image-with-text.settings.image_fill.label",
+      "default": true
+    },
+    {
       "type": "select",
       "id": "layout",
       "label": "t:sections.image-with-text.settings.layout.label",
@@ -70,16 +104,27 @@
       "default": "image_left"
     },
     {
+      "type": "select",
+      "id": "content_alignment",
+      "label": "t:sections.image-with-text.settings.content_alignment.label",
+      "options": [
+        { "value": "top", "label": "t:sections.image-with-text.settings.content_alignment.options.top" },
+        { "value": "middle", "label": "t:sections.image-with-text.settings.content_alignment.options.middle" },
+        { "value": "bottom", "label": "t:sections.image-with-text.settings.content_alignment.options.bottom" }
+      ],
+      "default": "middle"
+    },
+    {
       "type": "text",
       "id": "heading",
       "label": "t:sections.image-with-text.settings.heading.label",
-      "default": "Our story"
+      "default": "Crafted with purpose"
     },
     {
       "type": "richtext",
       "id": "text",
       "label": "t:sections.image-with-text.settings.text.label",
-      "default": "<p>Every pair is crafted with purpose — designed for those who demand clarity, quality, and uncompromising style.</p>"
+      "default": "<p>Every pair is designed for those who demand clarity, quality, and uncompromising style. From precision-cut lenses to hand-polished frames — we obsess over every detail.</p>"
     },
     {
       "type": "text",
@@ -93,14 +138,14 @@
     },
     {
       "type": "select",
-      "id": "button_style",
-      "label": "t:sections.image-with-text.settings.button_style.label",
+      "id": "background",
+      "label": "t:sections.image-with-text.settings.background.label",
       "options": [
-        { "value": "primary", "label": "t:sections.image-with-text.settings.button_style.options.primary" },
-        { "value": "accent", "label": "t:sections.image-with-text.settings.button_style.options.accent" },
-        { "value": "outline", "label": "t:sections.image-with-text.settings.button_style.options.outline" }
+        { "value": "none", "label": "t:sections.image-with-text.settings.background.options.none" },
+        { "value": "secondary", "label": "t:sections.image-with-text.settings.background.options.secondary" },
+        { "value": "dark", "label": "t:sections.image-with-text.settings.background.options.dark" }
       ],
-      "default": "primary"
+      "default": "none"
     }
   ],
   "presets": [
