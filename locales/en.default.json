@@ -251,6 +251,12 @@
         }
       }
     },
+    "collection-banner": {
+      "name": "Collection Banner",
+      "presets": {
+        "name": "Collection Banner"
+      }
+    },
     "featured-collection": {
       "name": "Featured Collection",
       "presets": {
@@ -467,6 +473,93 @@
           "label": "Recommendations collection",
           "info": "Products from this collection will be shown below the cart."
         }
+      }
+    },
+    "main-collection": {
+      "name": "Main Collection",
+      "presets": {
+        "name": "Main Collection"
+      }
+    },
+    "main-page": {
+      "name": "Page",
+      "presets": {
+        "name": "Page"
+      },
+      "settings": {
+        "show_title": {
+          "label": "Show page title"
+        },
+        "page_width": {
+          "label": "Page width",
+          "options": {
+            "narrow": "Narrow",
+            "medium": "Medium",
+            "wide": "Wide"
+          }
+        },
+        "text_alignment": {
+          "label": "Text alignment",
+          "options": {
+            "left": "Left",
+            "center": "Center"
+          }
+        },
+        "show_featured_image": {
+          "label": "Show featured image",
+          "info": "Display the page's featured image at the top."
+        }
+      }
+    },
+    "main-password": {
+      "name": "Password",
+      "presets": {
+        "name": "Password"
+      },
+      "settings": {
+        "logo": {
+          "label": "Logo",
+          "info": "Replaces the text title with a logo image."
+        },
+        "heading": {
+          "label": "Heading"
+        },
+        "subtext": {
+          "label": "Subtext"
+        },
+        "placeholder_text": {
+          "label": "Password placeholder text"
+        },
+        "button_text": {
+          "label": "Submit button text"
+        },
+        "marketing_text": {
+          "label": "Marketing text",
+          "info": "Rich text content displayed above the password form."
+        },
+        "background_image": {
+          "label": "Background image",
+          "info": "Full-screen background image. Recommended size: 2000 × 1400px."
+        },
+        "overlay_opacity": {
+          "label": "Overlay opacity"
+        },
+        "text_color": {
+          "label": "Text color",
+          "options": {
+            "light": "Light",
+            "dark": "Dark"
+          }
+        },
+        "show_social": {
+          "label": "Show social icons"
+        }
+      }
+    },
+    "main-product": {
+      "name": "Main Product",
+      "presets": {
+        "name": "Main Product"
       }
     },
     "main-search": {
