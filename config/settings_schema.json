@@ -8,7 +8,7 @@
     "theme_support_url": "https://solairethemes.com/support"
   },
   {
-    "name": "Colors",
+    "name": "t:settings_schema.colors.name",
     "settings": [
       {
         "type": "header",
@@ -125,7 +125,7 @@
     ]
   },
   {
-    "name": "Typography",
+    "name": "t:settings_schema.typography.name",
     "settings": [
       {
         "type": "header",
@@ -218,7 +218,7 @@
     ]
   },
   {
-    "name": "Header",
+    "name": "t:settings_schema.header.name",
     "settings": [
       {
         "type": "header",
@@ -308,7 +308,7 @@
     ]
   },
   {
-    "name": "Footer",
+    "name": "t:settings_schema.footer.name",
     "settings": [
       {
         "type": "header",
@@ -377,7 +377,7 @@
     ]
   },
   {
-    "name": "Product",
+    "name": "t:settings_schema.product.name",
     "settings": [
       {
         "type": "header",
@@ -488,7 +488,7 @@
     ]
   },
   {
-    "name": "Cart",
+    "name": "t:settings_schema.cart.name",
     "settings": [
       {
         "type": "header",
@@ -517,11 +517,11 @@
         "default": false
       },
       {
-        "type": "text",
+        "type": "number",
         "id": "cart_free_shipping_threshold",
         "label": "t:settings_schema.cart.free_shipping.label",
         "info": "t:settings_schema.cart.free_shipping.info",
-        "default": "100"
+        "default": 10000
       },
       {
         "type": "richtext",
@@ -532,7 +532,7 @@
     ]
   },
   {
-    "name": "Social media",
+    "name": "t:settings_schema.social.name",
     "settings": [
       {
         "type": "header",
@@ -589,7 +589,7 @@
     ]
   },
   {
-    "name": "Favicon",
+    "name": "t:settings_schema.favicon.name",
     "settings": [
       {
         "type": "header",
@@ -600,6 +600,36 @@
         "id": "favicon",
         "label": "t:settings_schema.favicon.image.label",
         "info": "t:settings_schema.favicon.image.info"
+      }
+    ]
+  },
+  {
+    "name": "t:settings_schema.social_image.name",
+    "settings": [
+      {
+        "type": "header",
+        "content": "t:settings_schema.social_image.header"
+      },
+      {
+        "type": "image_picker",
+        "id": "social_sharing_image",
+        "label": "t:settings_schema.social_image.image.label",
+        "info": "t:settings_schema.social_image.image.info"
+      }
+    ]
+  },
+  {
+    "name": "t:settings_schema.custom_css.name",
+    "settings": [
+      {
+        "type": "header",
+        "content": "t:settings_schema.custom_css.header"
+      },
+      {
+        "type": "textarea",
+        "id": "custom_css",
+        "label": "t:settings_schema.custom_css.code.label",
+        "info": "t:settings_schema.custom_css.code.info"
       }
     ]
   }

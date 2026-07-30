@@ -64,7 +64,7 @@
       "cart_type": "drawer",
       "cart_show_notes": true,
       "cart_show_shipping_estimate": false,
-      "cart_free_shipping_threshold": "100",
+      "cart_free_shipping_threshold": 10000,
       "cart_free_shipping_message": "Free shipping on orders over {{ settings.cart_free_shipping_threshold | money }}",
       "social_instagram_url": "https://instagram.com/solaireeyewear",
       "social_facebook_url": "https://facebook.com/solaireeyewear",
@@ -74,7 +74,9 @@
       "social_twitter_url": "",
       "social_snapchat_url": "",
       "social_vimeo_url": "",
-      "favicon": ""
+      "favicon": "",
+      "social_sharing_image": "",
+      "custom_css": ""
     }
   }
 }
