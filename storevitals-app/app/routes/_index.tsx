@@ -90,10 +90,6 @@ export default function Dashboard() {
     (i: any) => i.severity === "warning"
   ).length;
 
-  const issueTypes = [
-    ...new Set(currentIssues.map((i: any) => i.type)),
-  ] as string[];
-
   return (
     <div style={{ padding: "1.5rem", fontFamily: "system-ui, sans-serif", maxWidth: "1000px" }}>
       <header style={{ marginBottom: "1.5rem" }}>
@@ -190,7 +186,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Issues list */}
+      {/* Issues list grouped by category */}
       {currentIssues.length > 0 ? (
         <div>
           <h2
@@ -202,11 +198,39 @@ export default function Dashboard() {
           >
             Issues ({currentIssues.length})
           </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {currentIssues.map((issue: any) => (
-              <IssueCard key={issue.id} issue={issue} />
-            ))}
-          </div>
+          {(() => {
+            // Group issues by category
+            const categories = new Map<string, any[]>();
+            for (const issue of currentIssues) {
+              const cat = getIssueCategory(issue.type);
+              if (!categories.has(cat)) categories.set(cat, []);
+              categories.get(cat)!.push(issue);
+            }
+            const categoryOrder = ["Images", "SEO", "Links", "Other"];
+            return categoryOrder
+              .filter((c) => categories.has(c))
+              .map((cat) => (
+                <div key={cat} style={{ marginBottom: "1.25rem" }}>
+                  <h3
+                    style={{
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      color: "#374151",
+                      marginBottom: "0.5rem",
+                      paddingBottom: "0.375rem",
+                      borderBottom: "1px solid #e5e7eb",
+                    }}
+                  >
+                    {cat} ({categories.get(cat)!.length})
+                  </h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {categories.get(cat)!.map((issue: any) => (
+                      <IssueCard key={issue.id} issue={issue} />
+                    ))}
+                  </div>
+                </div>
+              ));
+          })()}
         </div>
       ) : currentScan && currentScan.status === "complete" ? (
         <div
@@ -350,8 +374,24 @@ function formatIssueType(type: string): string {
     missing_title: "Missing Title Tag",
     missing_meta_description: "Missing Meta Description",
     missing_alt_text: "Missing Image Alt Text",
+    image_size: "Oversized / Unoptimized Image",
+    image_dimensions: "Missing Image Dimensions",
+    image_format: "Wrong Image Format",
   };
   return labels[type] || type.replace(/_/g, " ");
+}
+
+function getIssueCategory(type: string): string {
+  if (["missing_alt_text", "image_size", "image_dimensions", "image_format"].includes(type)) {
+    return "Images";
+  }
+  if (["missing_title", "missing_meta_description"].includes(type)) {
+    return "SEO";
+  }
+  if (["broken_link"].includes(type)) {
+    return "Links";
+  }
+  return "Other";
 }
 
 function formatRelativeTime(dateStr: string): string {

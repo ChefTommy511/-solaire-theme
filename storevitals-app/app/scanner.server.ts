@@ -34,6 +34,9 @@ export async function runScan(scanId: number, shopDomain: string): Promise<void>
       const pageIssues = checkPageSEO(normalized, pageResult.$);
       allIssues.push(...pageIssues);
 
+      const imageIssues = await checkPageImages(normalized, pageResult.$, baseUrl);
+      allIssues.push(...imageIssues);
+
       const internalLinks = extractInternalLinks(baseUrl, pageResult.$);
       for (const link of internalLinks) {
         const norm = normalizeUrl(link);
@@ -200,6 +203,117 @@ async function checkBrokenLinks(
     finally { clearTimeout(timer); }
     await sleep(100);
   }
+  return issues;
+}
+
+async function checkPageImages(
+  pageUrl: string,
+  $: cheerio.CheerioAPI,
+  baseUrl: string,
+): Promise<InsertIssue[]> {
+  const issues: InsertIssue[] = [];
+  const baseOrigin = new URL(baseUrl).origin;
+
+  const imgElements = $("img").toArray();
+  for (const el of imgElements) {
+    const src = ($(el).attr("src") || "").trim();
+    if (!src) continue;
+
+    let resolvedSrc: string;
+    try {
+      resolvedSrc = new URL(src, baseUrl).href;
+    } catch {
+      continue;
+    }
+
+    // Only check local images (same domain as the shop)
+    const urlObj = new URL(resolvedSrc);
+    if (urlObj.origin !== baseOrigin) continue;
+
+    // ── 1. Missing width/height attributes (layout shift) ──
+    const width = $(el).attr("width");
+    const height = $(el).attr("height");
+    if (!width || !height) {
+      issues.push({
+        scan_id: 0,
+        severity: "warning",
+        type: "image_dimensions",
+        page_url: pageUrl,
+        description: `Image missing width and/or height attributes: ${src}`,
+        fix_recommendation:
+          "Add width and height attributes to prevent layout shift (CLS). Use the image's intrinsic dimensions.",
+        element_detail: src,
+      });
+    }
+
+    // ── 2. Wrong format: PNG used where WebP/JPEG would be better ──
+    const srcLower = src.toLowerCase();
+    const hasPngExt =
+      srcLower.endsWith(".png") || srcLower.includes(".png?");
+    if (hasPngExt) {
+      issues.push({
+        scan_id: 0,
+        severity: "warning",
+        type: "image_format",
+        page_url: pageUrl,
+        description: `PNG image found — consider converting to WebP or JPEG: ${src}`,
+        fix_recommendation:
+          "Convert PNG to WebP for better compression (smaller files, same quality). Use JPEG if it's a photograph.",
+        element_detail: src,
+      });
+    }
+
+    // ── 3. Image size check via HEAD request ──
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const res = await fetch(resolvedSrc, {
+          method: "HEAD",
+          signal: controller.signal,
+          headers: { "User-Agent": "StoreVitals-Scanner/1.0" },
+          redirect: "follow",
+        });
+        const contentLength = res.headers.get("content-length");
+        if (contentLength) {
+          const sizeBytes = parseInt(contentLength, 10);
+          const sizeKB = Math.round(sizeBytes / 1024);
+
+          if (sizeBytes > 500 * 1024) {
+            // >500KB — oversized
+            issues.push({
+              scan_id: 0,
+              severity: "warning",
+              type: "image_size",
+              page_url: pageUrl,
+              description: `Oversized image (${sizeKB}KB): ${src}`,
+              fix_recommendation: `Compress this image to under 300KB to improve page speed. Current size: ${sizeKB}KB. Use TinyPNG, ImageOptim, or Squoosh.`,
+              element_detail: src,
+            });
+          } else if (sizeBytes > 300 * 1024) {
+            // >300KB — compression opportunity
+            issues.push({
+              scan_id: 0,
+              severity: "warning",
+              type: "image_size",
+              page_url: pageUrl,
+              description: `Image could be compressed (${sizeKB}KB): ${src}`,
+              fix_recommendation: `Compress this image to under 300KB to improve page speed. Current size: ${sizeKB}KB.`,
+              element_detail: src,
+            });
+          }
+        }
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch {
+      // HEAD request failed, skip size check for this image
+    }
+
+    // Small delay between HEAD requests to avoid hammering the server
+    await sleep(50);
+  }
+
   return issues;
 }
 
