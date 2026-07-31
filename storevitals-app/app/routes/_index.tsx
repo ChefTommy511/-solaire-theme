@@ -1,9 +1,72 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useFetcher, useLoaderData } from "@remix-run/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import shopify from "../shopify.server";
 import { getLatestScan, getIssuesForScan } from "../db.server";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface Issue {
+  id: number;
+  severity: "critical" | "warning" | "info";
+  type: string;
+  page_url: string;
+  source_url: string | null;
+  description: string;
+  fix_recommendation: string;
+  element_detail: string | null;
+}
+
+interface ScanData {
+  id: number;
+  status: string;
+  pages_scanned: number;
+  started_at: string;
+  completed_at: string | null;
+}
+
+type CategoryFilter =
+  | "All"
+  | "Links"
+  | "SEO"
+  | "Images"
+  | "Performance"
+  | "SEO Infrastructure";
+
+// ─── Shared style constants (Polaris-inspired design tokens) ─────────────────
+
+const COLORS = {
+  critical: "#D82C0D",    // Polaris critical red
+  criticalBg: "#FEF3F2",  // Polaris critical surface
+  warning: "#B98900",     // Polaris warning amber
+  warningBg: "#FFF5EA",   // Polaris warning surface
+  info: "#005BD3",        // Polaris info blue
+  infoBg: "#F1F7FF",      // Polaris info surface
+  success: "#007F5F",     // Polaris success green
+  successBg: "#EFFBF5",   // Polaris success surface
+  text: "#303030",        // Polaris text
+  textSecondary: "#616161",
+  textTertiary: "#8C9196",
+  border: "#E1E3E5",      // Polaris border
+  borderStrong: "#C9CCCF",
+  surface: "#FFFFFF",
+  surfaceBg: "#F6F6F7",   // Polaris background
+  surfaceHover: "#F1F1F1",
+  brand: "#1A1A2E",       // StoreVitals brand dark
+  brandHover: "#2D2D4A",
+};
+
+const FONTS = {
+  heading: "600 13px/140% -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  headingLg: "600 15px/140% -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  body: "400 13px/140% -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  bodySm: "400 12px/140% -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  mono: "400 12px/140% 'SF Mono', 'Monaco', 'Inconsolata', monospace",
+  metric: "700 30px/120% -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+};
+
+// ─── Loader ──────────────────────────────────────────────────────────────────
 
 export const headers: HeadersFunction = () => ({
   "Content-Security-Policy":
@@ -19,8 +82,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
   const shopData = shopResponse.data[0];
 
-  const scan = getLatestScan(session.shop);
-  const issues = scan ? getIssuesForScan(scan.id) : [];
+  const scan = getLatestScan(session.shop) as ScanData | null;
+  const issues: Issue[] = scan ? getIssuesForScan(scan.id) : [];
 
   return json({
     shop: {
@@ -50,11 +113,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 };
 
+// ─── Page Component ──────────────────────────────────────────────────────────
+
 export default function Dashboard() {
   const { shop, scan, issues } = useLoaderData<typeof loader>();
   const fetcher = useFetcher();
   const [currentScan, setCurrentScan] = useState(scan);
-  const [currentIssues, setCurrentIssues] = useState(issues);
+  const [currentIssues, setCurrentIssues] = useState<Issue[]>(issues);
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const isScanning =
     currentScan?.status === "running" || fetcher.state === "submitting";
@@ -83,290 +150,752 @@ export default function Dashboard() {
     fetcher.submit(null, { method: "POST", action: "/api/scan" });
   }
 
-  const criticalCount = currentIssues.filter(
-    (i: any) => i.severity === "critical"
-  ).length;
-  const warningCount = currentIssues.filter(
-    (i: any) => i.severity === "warning"
-  ).length;
+  // ── Derived counts ─────────────────────────────────────────────────────────
+
+  const counts = useMemo(() => {
+    const critical = currentIssues.filter((i) => i.severity === "critical").length;
+    const warning = currentIssues.filter((i) => i.severity === "warning").length;
+    const info = currentIssues.filter((i) => i.severity === "info").length;
+    return { critical, warning, info, total: currentIssues.length };
+  }, [currentIssues]);
+
+  // ── Filter & search ────────────────────────────────────────────────────────
+
+  const filteredIssues = useMemo(() => {
+    let result = currentIssues;
+
+    if (categoryFilter !== "All") {
+      result = result.filter((i) => getIssueCategory(i.type) === categoryFilter);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (i) =>
+          i.description.toLowerCase().includes(q) ||
+          i.page_url.toLowerCase().includes(q) ||
+          i.fix_recommendation.toLowerCase().includes(q) ||
+          formatIssueType(i.type).toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [currentIssues, categoryFilter, searchQuery]);
+
+  const isFiltered =
+    categoryFilter !== "All" || searchQuery.trim().length > 0;
+
+  // ── Status badge ───────────────────────────────────────────────────────────
+
+  const statusBadge = useMemo(() => {
+    if (!currentScan || currentScan.status === "running") {
+      return { label: "No scan", color: COLORS.textTertiary, dot: COLORS.textTertiary };
+    }
+    if (currentScan.status === "complete") {
+      return { label: "Healthy", color: COLORS.success, dot: COLORS.success };
+    }
+    if (currentScan.status === "failed") {
+      return { label: "Error", color: COLORS.critical, dot: COLORS.critical };
+    }
+    return { label: "Unknown", color: COLORS.textTertiary, dot: COLORS.textTertiary };
+  }, [currentScan]);
+
+  const lastScanTime =
+    currentScan && currentScan.started_at
+      ? formatRelativeTime(currentScan.started_at)
+      : null;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: "1.5rem", fontFamily: "system-ui, sans-serif", maxWidth: "1000px" }}>
-      <header style={{ marginBottom: "1.5rem" }}>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>
-          StoreVitals
-        </h1>
-        <p style={{ color: "#666", marginTop: "0.25rem", fontSize: "0.875rem" }}>
-          Store health dashboard for {shop.name}
-        </p>
-      </header>
+    <div style={styles.root}>
+      {/* ─── Header ─── */}
+      <header style={styles.header}>
+        <div style={styles.headerLeft}>
+          <div style={styles.logoArea}>
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 28 28"
+              fill="none"
+              style={{ flexShrink: 0 }}
+            >
+              <rect
+                width="28"
+                height="28"
+                rx="6"
+                fill={COLORS.brand}
+              />
+              <path
+                d="M8 14h3l1.5-4 3 8 1.5-4H22"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <div>
+              <h1 style={styles.headerTitle}>StoreVitals</h1>
+              <p style={styles.headerSubtitle}>{shop.name}</p>
+            </div>
+          </div>
 
-      {/* Stats row */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "0.75rem",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <StatCard
-          title="Issues Found"
-          value={currentIssues.length}
-          color={currentIssues.length > 0 ? "#ef4444" : "#22c55e"}
-        />
-        <StatCard title="Critical" value={criticalCount} color="#ef4444" />
-        <StatCard title="Warnings" value={warningCount} color="#f59e0b" />
-        <StatCard
-          title="Pages Scanned"
-          value={currentScan?.pages_scanned ?? 0}
-          color="#3b82f6"
-        />
-        <StatCard
-          title="Last Scan"
-          value={
-            currentScan
-              ? formatRelativeTime(currentScan.started_at)
-              : "Never"
-          }
-          color="#6b7280"
-        />
-      </div>
+          <div style={styles.headerMeta}>
+            <div style={styles.statusBadgeRow}>
+              <span
+                style={{
+                  ...styles.statusDot,
+                  backgroundColor: statusBadge.dot,
+                }}
+              />
+              <span
+                style={{
+                  ...styles.statusLabel,
+                  color: statusBadge.color,
+                }}
+              >
+                {statusBadge.label}
+              </span>
+            </div>
+            {lastScanTime && (
+              <span style={styles.lastScanText}>
+                Last scan: {lastScanTime}
+              </span>
+            )}
+            {currentScan?.status === "complete" && (
+              <span style={styles.scanMetaText}>
+                {currentScan.pages_scanned} pages scanned
+              </span>
+            )}
+          </div>
+        </div>
 
-      {/* Scan button + status */}
-      <div style={{ marginBottom: "1.5rem" }}>
         <button
           onClick={triggerScan}
           disabled={isScanning}
           style={{
-            background: isScanning ? "#9ca3af" : "#1a1a2e",
-            color: "#fff",
-            border: "none",
-            padding: "0.625rem 1.25rem",
-            borderRadius: "6px",
-            fontSize: "0.875rem",
-            fontWeight: 600,
-            cursor: isScanning ? "not-allowed" : "pointer",
+            ...styles.scanButton,
+            ...(isScanning ? styles.scanButtonDisabled : {}),
           }}
         >
-          {isScanning ? "Scanning..." : "Scan Store"}
+          {isScanning ? (
+            <>
+              <Spinner size={14} />
+              <span>Scanning…</span>
+            </>
+          ) : (
+            <>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                style={{ flexShrink: 0 }}
+              >
+                <path
+                  d="M13.5 8.5a5.5 5.5 0 1 1-1.6-3.9"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M11.5 4.5v-3h3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span>Scan Now</span>
+            </>
+          )}
         </button>
-        {currentScan?.status === "running" && (
-          <span
-            style={{
-              marginLeft: "0.75rem",
-              fontSize: "0.8rem",
-              color: "#6b7280",
-            }}
-          >
-            Crawling pages… {currentScan.pages_scanned} scanned so far
-          </span>
-        )}
-        {currentScan?.status === "complete" && (
-          <span
-            style={{
-              marginLeft: "0.75rem",
-              fontSize: "0.8rem",
-              color: "#22c55e",
-            }}
-          >
-            ✓ Scan complete — {currentScan.pages_scanned} pages scanned
-          </span>
-        )}
-        {currentScan?.status === "failed" && (
-          <span
-            style={{
-              marginLeft: "0.75rem",
-              fontSize: "0.8rem",
-              color: "#ef4444",
-            }}
-          >
-            ✗ Scan failed — try again
-          </span>
-        )}
+      </header>
+
+      {/* ─── Summary bar ─── */}
+      <div style={styles.summaryBar}>
+        <SummaryMetric
+          label="Total Issues"
+          value={counts.total}
+          color={
+            counts.total > 0 ? COLORS.text : COLORS.textTertiary
+          }
+        />
+        <div style={styles.summaryDivider} />
+        <SummaryMetric label="Critical" value={counts.critical} color={COLORS.critical} />
+        <div style={styles.summaryDivider} />
+        <SummaryMetric label="Warnings" value={counts.warning} color={COLORS.warning} />
+        <div style={styles.summaryDivider} />
+        <SummaryMetric label="Info" value={counts.info} color={COLORS.info} />
       </div>
 
-      {/* Issues list grouped by category */}
-      {currentIssues.length > 0 ? (
-        <div>
-          <h2
-            style={{
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              marginBottom: "0.75rem",
-            }}
-          >
-            Issues ({currentIssues.length})
-          </h2>
-          {(() => {
-            // Group issues by category
-            const categories = new Map<string, any[]>();
-            for (const issue of currentIssues) {
-              const cat = getIssueCategory(issue.type);
-              if (!categories.has(cat)) categories.set(cat, []);
-              categories.get(cat)!.push(issue);
-            }
-            const categoryOrder = ["Images", "SEO", "Performance", "Links", "Other"];
-            return categoryOrder
-              .filter((c) => categories.has(c))
-              .map((cat) => (
-                <div key={cat} style={{ marginBottom: "1.25rem" }}>
-                  <h3
+      {/* ─── Filters & search ─── */}
+      {currentIssues.length > 0 && (
+        <div style={styles.filterBar}>
+          <div style={styles.filterChips}>
+            {FILTER_CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                style={{
+                  ...styles.filterChip,
+                  ...(categoryFilter === cat ? styles.filterChipActive : {}),
+                }}
+              >
+                {cat}
+                {cat !== "All" && (
+                  <span
                     style={{
-                      fontSize: "0.9rem",
-                      fontWeight: 600,
-                      color: "#374151",
-                      marginBottom: "0.5rem",
-                      paddingBottom: "0.375rem",
-                      borderBottom: "1px solid #e5e7eb",
+                      ...styles.filterChipCount,
+                      ...(categoryFilter === cat
+                        ? styles.filterChipCountActive
+                        : {}),
                     }}
                   >
-                    {cat} ({categories.get(cat)!.length})
-                  </h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                    {categories.get(cat)!.map((issue: any) => (
-                      <IssueCard key={issue.id} issue={issue} />
-                    ))}
-                  </div>
-                </div>
-              ));
-          })()}
+                    {currentIssues.filter(
+                      (i) => getIssueCategory(i.type) === cat
+                    ).length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div style={styles.filterActions}>
+            <div style={styles.searchBox}>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                style={styles.searchIcon}
+              >
+                <circle
+                  cx="6"
+                  cy="6"
+                  r="4.5"
+                  stroke={COLORS.textTertiary}
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M9.5 9.5L13 13"
+                  stroke={COLORS.textTertiary}
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search issues…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={styles.searchInput}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  style={styles.searchClear}
+                  title="Clear search"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path
+                      d="M3 3l6 6M9 3l-6 6"
+                      stroke={COLORS.textTertiary}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            <ExportCSVButton issues={filteredIssues} />
+          </div>
+
+          {isFiltered && (
+            <div style={styles.resultsCount}>
+              {filteredIssues.length} result{filteredIssues.length !== 1 ? "s" : ""}
+              {searchQuery && (
+                <span>
+                  {" "}for "{searchQuery}"
+                </span>
+              )}
+            </div>
+          )}
         </div>
-      ) : currentScan && currentScan.status === "complete" ? (
-        <div
-          style={{
-            background: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            borderRadius: "8px",
-            padding: "1.5rem",
-            textAlign: "center",
-          }}
-        >
-          <p style={{ color: "#166534", fontWeight: 600, margin: 0 }}>
-            🎉 No issues found! Your store looks healthy.
-          </p>
+      )}
+
+      {/* ─── Loading skeleton ─── */}
+      <style>{`
+        @keyframes shimmer {
+          0% { opacity: 0.5; }
+          50% { opacity: 1; }
+          100% { opacity: 0.5; }
+        }
+      `}</style>
+      {isScanning && currentIssues.length === 0 && (
+        <div style={styles.skeletonContainer}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} style={styles.skeletonCard}>
+              <div style={styles.skeletonLine1} />
+              <div style={styles.skeletonLine2} />
+              <div style={styles.skeletonLine3} />
+              <div style={styles.skeletonLine4} />
+            </div>
+          ))}
         </div>
-      ) : !currentScan ? (
-        <div
-          style={{
-            background: "#f9fafb",
-            border: "1px solid #e5e7eb",
-            borderRadius: "8px",
-            padding: "2rem",
-            textAlign: "center",
-          }}
-        >
-          <h2 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
-            No scan data yet
-          </h2>
-          <p style={{ color: "#666", margin: 0, fontSize: "0.875rem" }}>
+      )}
+
+      {/* ─── Issue list ─── */}
+      {!isScanning && filteredIssues.length > 0 && (
+        <div style={styles.issueList}>
+          {filteredIssues.map((issue) => (
+            <IssueRow key={issue.id} issue={issue} />
+          ))}
+        </div>
+      )}
+
+      {/* ─── Empty states ─── */}
+      {!isScanning &&
+        currentScan &&
+        currentScan.status === "complete" &&
+        currentIssues.length === 0 && (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 48 48"
+                fill="none"
+              >
+                <circle cx="24" cy="24" r="22" stroke={COLORS.success} strokeWidth="2" />
+                <path
+                  d="M14 24l6 6 14-14"
+                  stroke={COLORS.success}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <h2 style={styles.emptyTitle}>All clear!</h2>
+            <p style={styles.emptyText}>
+              No issues found. Your store looks healthy — keep it up!
+            </p>
+          </div>
+        )}
+
+      {!isScanning &&
+        currentScan &&
+        currentScan.status === "complete" &&
+        currentIssues.length > 0 &&
+        filteredIssues.length === 0 && (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 48 48"
+                fill="none"
+              >
+                <circle cx="24" cy="24" r="22" stroke={COLORS.borderStrong} strokeWidth="2" />
+                <path
+                  d="M24 14v12M24 30v2"
+                  stroke={COLORS.textTertiary}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <h2 style={styles.emptyTitle}>No matches</h2>
+            <p style={styles.emptyText}>
+              No issues match your current filters. Try adjusting your search or
+              category filter.
+            </p>
+            <button
+              onClick={() => {
+                setCategoryFilter("All");
+                setSearchQuery("");
+              }}
+              style={styles.resetButton}
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
+
+      {!isScanning && !currentScan && (
+        <div style={styles.emptyState}>
+          <div style={styles.emptyIcon}>
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 48 48"
+              fill="none"
+            >
+              <rect
+                x="8"
+                y="10"
+                width="32"
+                height="28"
+                rx="3"
+                stroke={COLORS.borderStrong}
+                strokeWidth="2"
+              />
+              <path
+                d="M18 22h12M18 28h8"
+                stroke={COLORS.textTertiary}
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+          <h2 style={styles.emptyTitle}>No scan data yet</h2>
+          <p style={styles.emptyText}>
             Run your first store scan to check for broken links, SEO gaps, and
-            other issues.
+            other issues. It only takes a minute.
           </p>
+          <button
+            onClick={triggerScan}
+            style={styles.scanNowEmptyButton}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              style={{ flexShrink: 0 }}
+            >
+              <path
+                d="M13.5 8.5a5.5 5.5 0 1 1-1.6-3.9"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M11.5 4.5v-3h3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Scan My Store</span>
+          </button>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
 
-function StatCard({
-  title,
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function SummaryMetric({
+  label,
   value,
   color,
 }: {
-  title: string;
-  value: string | number;
+  label: string;
+  value: number;
   color: string;
 }) {
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        padding: "0.875rem",
-      }}
-    >
-      <p style={{ color: "#666", fontSize: "0.7rem", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-        {title}
-      </p>
-      <p
-        style={{
-          color,
-          fontSize: "1.5rem",
-          fontWeight: 700,
-          margin: "0.15rem 0 0",
-        }}
-      >
-        {value}
-      </p>
+    <div style={styles.summaryMetric}>
+      <span style={{ ...styles.summaryValue, color }}>{value}</span>
+      <span style={styles.summaryLabel}>{label}</span>
     </div>
   );
 }
 
-function IssueCard({ issue }: { issue: any }) {
+function IssueRow({ issue }: { issue: Issue }) {
+  const [copied, setCopied] = useState(false);
+  const copyTimeout = useRef<ReturnType<typeof setTimeout>>();
+
   const severityColor =
-    issue.severity === "critical" ? "#ef4444" : issue.severity === "info" ? "#2563eb" : "#f59e0b";
+    issue.severity === "critical"
+      ? COLORS.critical
+      : issue.severity === "warning"
+        ? COLORS.warning
+        : COLORS.info;
+
   const severityBg =
-    issue.severity === "critical" ? "#fef2f2" : issue.severity === "info" ? "#eff6ff" : "#fffbeb";
+    issue.severity === "critical"
+      ? COLORS.criticalBg
+      : issue.severity === "warning"
+        ? COLORS.warningBg
+        : COLORS.infoBg;
+
+  const severityIcon =
+    issue.severity === "critical" ? (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path
+          d="M7 1L13 12H1L7 1Z"
+          stroke={COLORS.critical}
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+        <path d="M7 5v3M7 10.5v.5" stroke={COLORS.critical} strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ) : issue.severity === "warning" ? (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <rect x="1" y="1" width="12" height="12" rx="6" stroke={COLORS.warning} strokeWidth="1.5" />
+        <path d="M7 4v3M7 9.5v.5" stroke={COLORS.warning} strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ) : (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <circle cx="7" cy="7" r="6" stroke={COLORS.info} strokeWidth="1.5" />
+        <path d="M7 6v4M7 4.5v.5" stroke={COLORS.info} strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+
   const typeLabel = formatIssueType(issue.type);
+  const truncatedUrl = truncateUrl(issue.page_url, 50);
+
+  function handleCopyFix() {
+    navigator.clipboard.writeText(issue.fix_recommendation);
+    setCopied(true);
+    if (copyTimeout.current) clearTimeout(copyTimeout.current);
+    copyTimeout.current = setTimeout(() => setCopied(false), 2000);
+  }
 
   return (
     <div
       style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderLeft: `4px solid ${severityColor}`,
-        borderRadius: "6px",
-        padding: "0.875rem",
+        ...styles.issueRow,
+        borderLeftColor: severityColor,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          marginBottom: "0.375rem",
-        }}
-      >
-        <span
-          style={{
-            background: severityBg,
-            color: severityColor,
-            fontSize: "0.7rem",
-            fontWeight: 700,
-            padding: "0.15rem 0.5rem",
-            borderRadius: "999px",
-            textTransform: "uppercase",
-          }}
-        >
-          {issue.severity}
-        </span>
-        <span style={{ fontSize: "0.8rem", fontWeight: 600 }}>
-          {typeLabel}
-        </span>
+      <div style={styles.issueMain}>
+        {/* Severity & category */}
+        <div style={styles.issueHeader}>
+          <div style={styles.issueBadges}>
+            <span
+              style={{
+                ...styles.severityBadge,
+                backgroundColor: severityBg,
+                color: severityColor,
+              }}
+            >
+              {severityIcon}
+              <span>{issue.severity}</span>
+            </span>
+            <span style={styles.categoryBadge}>{typeLabel}</span>
+          </div>
+
+          <button
+            onClick={handleCopyFix}
+            style={{
+              ...styles.copyFixButton,
+              ...(copied ? styles.copyFixButtonDone : {}),
+            }}
+            title="Copy fix recommendation"
+          >
+            {copied ? (
+              <>
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path
+                    d="M3 6.5L5.5 9l4.5-5"
+                    stroke={COLORS.success}
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Copied
+              </>
+            ) : (
+              <>
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <rect
+                    x="3.5"
+                    y="3.5"
+                    width="8"
+                    height="8"
+                    rx="1.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  />
+                  <path
+                    d="M1.5 9.5V2A0.5 0.5 0 012 1.5h8"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Copy fix
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Description */}
+        <p style={styles.issueDescription}>{issue.description}</p>
+
+        {/* URL */}
+        <div style={styles.issueUrl}>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            style={{ flexShrink: 0, marginTop: 2 }}
+          >
+            <path
+              d="M4.5 1.5h-2A1 1 0 001.5 2.5v7A1 1 0 002.5 10.5h7a1 1 0 001-1v-2"
+              stroke={COLORS.textTertiary}
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+            <path
+              d="M5.5 6.5l5-5M10.5 3V1L8.5 1.5"
+              stroke={COLORS.textTertiary}
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <code style={styles.issueUrlText}>{truncatedUrl}</code>
+        </div>
+
+        {/* Fix recommendation */}
+        <div style={styles.fixBox}>
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 13 13"
+            fill="none"
+            style={{ flexShrink: 0, marginTop: 1 }}
+          >
+            <circle cx="6.5" cy="6.5" r="5.5" stroke={COLORS.info} strokeWidth="1.3" />
+            <path d="M6.5 4.5v4M5 6.5h3" stroke={COLORS.info} strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+          <span style={styles.fixText}>{issue.fix_recommendation}</span>
+        </div>
       </div>
-      <p style={{ fontSize: "0.8rem", color: "#374151", margin: "0 0 0.25rem" }}>
-        {issue.description}
-      </p>
-      <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: 0 }}>
-        📍 <code style={{ background: "#f3f4f6", padding: "0.1rem 0.3rem", borderRadius: "3px" }}>{issue.page_url}</code>
-      </p>
-      <p
-        style={{
-          fontSize: "0.75rem",
-          color: "#1d4ed8",
-          margin: "0.375rem 0 0",
-          background: "#eff6ff",
-          padding: "0.375rem 0.5rem",
-          borderRadius: "4px",
-        }}
-      >
-        💡 {issue.fix_recommendation}
-      </p>
     </div>
   );
 }
+
+function ExportCSVButton({ issues }: { issues: Issue[] }) {
+  const [state, setState] = useState<"idle" | "done">("idle");
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  function handleExport() {
+    const header = [
+      "Severity",
+      "Category",
+      "Page URL",
+      "Description",
+      "Fix Recommendation",
+    ];
+    const rows = issues.map((i) => [
+      i.severity,
+      formatIssueType(i.type),
+      i.page_url,
+      escapeCsvCell(i.description),
+      escapeCsvCell(i.fix_recommendation),
+    ]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((c) => `"${c}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `storevitals-issues-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    setState("done");
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setState("idle"), 2000);
+  }
+
+  return (
+    <button
+      onClick={handleExport}
+      disabled={issues.length === 0}
+      style={{
+        ...styles.exportButton,
+        ...(state === "done" ? styles.exportButtonDone : {}),
+        ...(issues.length === 0 ? styles.exportButtonDisabled : {}),
+      }}
+      title="Download issues as CSV"
+    >
+      {state === "done" ? (
+        <>
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <path
+              d="M3 6.5L5.5 9l4.5-5"
+              stroke={COLORS.success}
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Exported
+        </>
+      ) : (
+        <>
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <path
+              d="M6.5 1v8M3.5 5l3 3 3-3M2 11.5h9"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Export CSV
+        </>
+      )}
+    </button>
+  );
+}
+
+function Spinner({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      style={{ animation: "spin 0.8s linear infinite", flexShrink: 0 }}
+    >
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeDasharray="31.4 31.4"
+        strokeLinecap="round"
+        opacity={0.3}
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeDasharray="15.7 47.1"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const FILTER_CATEGORIES: CategoryFilter[] = [
+  "All",
+  "Links",
+  "SEO",
+  "Images",
+  "Performance",
+  "SEO Infrastructure",
+];
 
 function formatIssueType(type: string): string {
   const labels: Record<string, string> = {
@@ -382,26 +911,44 @@ function formatIssueType(type: string): string {
     robots_blocked: "Robots.txt Blocks Crawling",
     sitemap_not_linked: "Sitemap Not Linked",
     sitemap_empty: "Empty or Invalid Sitemap",
+    page_size: "Page Too Large",
+    page_slow: "Slow Page Load",
+    resource_size: "Oversized Resource",
+    resource_count: "Too Many Resources",
+    missing_preload: "Missing Preload Hint",
   };
   return labels[type] || type.replace(/_/g, " ");
 }
 
 function getIssueCategory(type: string): string {
-  if (["missing_alt_text", "image_size", "image_dimensions", "image_format"].includes(type)) {
+  if (
+    ["missing_alt_text", "image_size", "image_dimensions", "image_format"].includes(
+      type
+    )
+  )
     return "Images";
-  }
-  if (["missing_title", "missing_meta_description"].includes(type)) {
-    return "SEO";
-  }
-  if (["missing_sitemap", "missing_robots", "robots_blocked", "sitemap_not_linked", "sitemap_empty"].includes(type)) {
+  if (["missing_title", "missing_meta_description"].includes(type)) return "SEO";
+  if (
+    [
+      "missing_sitemap",
+      "missing_robots",
+      "robots_blocked",
+      "sitemap_not_linked",
+      "sitemap_empty",
+    ].includes(type)
+  )
     return "SEO Infrastructure";
-  }
-  if (["page_size", "page_slow", "resource_size", "resource_count", "missing_preload"].includes(type)) {
+  if (
+    [
+      "page_size",
+      "page_slow",
+      "resource_size",
+      "resource_count",
+      "missing_preload",
+    ].includes(type)
+  )
     return "Performance";
-  }
-  if (["broken_link"].includes(type)) {
-    return "Links";
-  }
+  if (["broken_link"].includes(type)) return "Links";
   return "Other";
 }
 
@@ -416,3 +963,488 @@ function formatRelativeTime(dateStr: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   return `${Math.floor(diffHr / 24)}d ago`;
 }
+
+function truncateUrl(url: string, maxLen: number): string {
+  if (url.length <= maxLen) return url;
+  // Try to keep the domain + start and end of path
+  try {
+    const u = new URL(url);
+    const base = u.origin;
+    const path = u.pathname;
+    const available = maxLen - base.length - 5; // 5 = "..."
+    if (available < 10) return url.slice(0, maxLen - 3) + "...";
+    if (path.length > available) {
+      return base + path.slice(0, available - 3) + "..." + path.slice(-3);
+    }
+    return base + path;
+  } catch {
+    return url.slice(0, maxLen - 3) + "...";
+  }
+}
+
+function escapeCsvCell(text: string): string {
+  return text.replace(/"/g, '""');
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const styles: Record<string, React.CSSProperties> = {
+  // Root
+  root: {
+    font: FONTS.body,
+    color: COLORS.text,
+    backgroundColor: COLORS.surfaceBg,
+    minHeight: "100vh",
+  },
+
+  // ── Header ──
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "16px 20px",
+    backgroundColor: COLORS.surface,
+    borderBottom: `1px solid ${COLORS.border}`,
+    gap: "16px",
+    flexWrap: "wrap",
+  },
+  headerLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "20px",
+    flexWrap: "wrap",
+    minWidth: 0,
+  },
+  logoArea: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    flexShrink: 0,
+  },
+  headerTitle: {
+    font: FONTS.headingLg,
+    fontSize: "16px",
+    margin: 0,
+    color: COLORS.text,
+  },
+  headerSubtitle: {
+    font: FONTS.bodySm,
+    color: COLORS.textSecondary,
+    margin: "1px 0 0",
+  },
+  headerMeta: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    flexWrap: "wrap",
+  },
+  statusBadgeRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    display: "inline-block",
+  },
+  statusLabel: {
+    font: FONTS.heading,
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+  },
+  lastScanText: {
+    font: FONTS.bodySm,
+    color: COLORS.textTertiary,
+  },
+  scanMetaText: {
+    font: FONTS.bodySm,
+    color: COLORS.textSecondary,
+  },
+
+  scanButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "7px",
+    backgroundColor: COLORS.brand,
+    color: "#FFFFFF",
+    border: "none",
+    borderRadius: "6px",
+    padding: "9px 16px",
+    font: FONTS.heading,
+    fontSize: "13px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+  },
+  scanButtonDisabled: {
+    backgroundColor: COLORS.borderStrong,
+    color: COLORS.textTertiary,
+    cursor: "not-allowed",
+  },
+
+  // ── Summary bar ──
+  summaryBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0px",
+    backgroundColor: COLORS.surface,
+    borderBottom: `1px solid ${COLORS.border}`,
+    padding: "18px 20px",
+    overflowX: "auto",
+  },
+  summaryMetric: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: "8px",
+    padding: "0 18px",
+    flexShrink: 0,
+  },
+  summaryValue: {
+    font: FONTS.metric,
+    fontWeight: 700,
+    fontSize: "28px",
+    letterSpacing: "-0.02em",
+  },
+  summaryLabel: {
+    font: FONTS.bodySm,
+    color: COLORS.textTertiary,
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  summaryDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: COLORS.border,
+    flexShrink: 0,
+  },
+
+  // ── Filters ──
+  filterBar: {
+    backgroundColor: COLORS.surface,
+    borderBottom: `1px solid ${COLORS.border}`,
+    padding: "12px 20px",
+  },
+  filterChips: {
+    display: "flex",
+    gap: "6px",
+    flexWrap: "wrap",
+    marginBottom: "10px",
+  },
+  filterChip: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "5px 11px",
+    borderRadius: "6px",
+    border: `1px solid ${COLORS.border}`,
+    backgroundColor: COLORS.surface,
+    color: COLORS.textSecondary,
+    font: FONTS.bodySm,
+    fontSize: "12px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    transition: "background-color 0.15s",
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.brand,
+    borderColor: COLORS.brand,
+    color: "#FFFFFF",
+  },
+  filterChipCount: {
+    backgroundColor: COLORS.surfaceBg,
+    borderRadius: "3px",
+    padding: "1px 5px",
+    fontSize: "11px",
+    fontWeight: 600,
+    color: COLORS.textTertiary,
+  },
+  filterChipCountActive: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    color: "#FFFFFF",
+  },
+  filterActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    flexWrap: "wrap",
+  },
+  searchBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: "7px",
+    backgroundColor: COLORS.surfaceBg,
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: "6px",
+    padding: "6px 10px",
+    flex: "1 1 220px",
+    maxWidth: "320px",
+  },
+  searchIcon: {
+    flexShrink: 0,
+  },
+  searchInput: {
+    border: "none",
+    background: "transparent",
+    outline: "none",
+    font: FONTS.body,
+    fontSize: "13px",
+    color: COLORS.text,
+    width: "100%",
+  },
+  searchClear: {
+    border: "none",
+    background: "none",
+    cursor: "pointer",
+    padding: "2px",
+    display: "flex",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  exportButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "6px 12px",
+    borderRadius: "6px",
+    border: `1px solid ${COLORS.border}`,
+    backgroundColor: COLORS.surface,
+    color: COLORS.textSecondary,
+    font: FONTS.bodySm,
+    fontSize: "12px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    transition: "background-color 0.15s",
+  },
+  exportButtonDone: {
+    borderColor: COLORS.success,
+    color: COLORS.success,
+    backgroundColor: COLORS.successBg,
+  },
+  exportButtonDisabled: {
+    opacity: 0.4,
+    cursor: "default",
+  },
+  resultsCount: {
+    font: FONTS.bodySm,
+    color: COLORS.textTertiary,
+    marginTop: "8px",
+  },
+
+  // ── Skeleton ──
+  skeletonContainer: {
+    padding: "16px 20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  skeletonCard: {
+    backgroundColor: COLORS.surface,
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: "8px",
+    padding: "16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  skeletonLine1: {
+    width: "30%",
+    height: "14px",
+    borderRadius: "4px",
+    backgroundColor: COLORS.surfaceBg,
+    animation: "shimmer 1.5s ease-in-out infinite",
+  } as React.CSSProperties,
+  skeletonLine2: {
+    width: "75%",
+    height: "12px",
+    borderRadius: "4px",
+    backgroundColor: COLORS.surfaceBg,
+    animation: "shimmer 1.5s ease-in-out infinite",
+    animationDelay: "0.1s",
+  } as React.CSSProperties,
+  skeletonLine3: {
+    width: "45%",
+    height: "10px",
+    borderRadius: "3px",
+    backgroundColor: COLORS.surfaceBg,
+    animation: "shimmer 1.5s ease-in-out infinite",
+    animationDelay: "0.2s",
+  } as React.CSSProperties,
+  skeletonLine4: {
+    width: "60%",
+    height: "10px",
+    borderRadius: "3px",
+    backgroundColor: COLORS.surfaceBg,
+    animation: "shimmer 1.5s ease-in-out infinite",
+    animationDelay: "0.3s",
+  } as React.CSSProperties,
+
+  // ── Issue list ──
+  issueList: {
+    padding: "0 20px 20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0",
+  },
+  issueRow: {
+    display: "flex",
+    backgroundColor: COLORS.surface,
+    borderTop: `1px solid ${COLORS.border}`,
+    borderLeft: "4px solid transparent",
+    borderRight: `1px solid ${COLORS.border}`,
+    borderBottom: `1px solid ${COLORS.border}`,
+    transition: "background-color 0.15s",
+  },
+  issueMain: {
+    padding: "14px 16px 14px 12px",
+    flex: 1,
+    minWidth: 0,
+  },
+  issueHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: "10px",
+    marginBottom: "8px",
+    flexWrap: "wrap",
+  },
+  issueBadges: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    flexWrap: "wrap",
+  },
+  severityBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "2px 8px",
+    borderRadius: "4px",
+    fontSize: "11px",
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.03em",
+  },
+  categoryBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "2px 8px",
+    borderRadius: "4px",
+    fontSize: "11px",
+    fontWeight: 600,
+    backgroundColor: COLORS.surfaceBg,
+    color: COLORS.textSecondary,
+  },
+  copyFixButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "3px 10px",
+    borderRadius: "4px",
+    border: `1px solid ${COLORS.border}`,
+    backgroundColor: COLORS.surface,
+    color: COLORS.textSecondary,
+    fontSize: "11px",
+    fontWeight: 500,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    transition: "background-color 0.15s, border-color 0.15s",
+  },
+  copyFixButtonDone: {
+    borderColor: COLORS.success,
+    color: COLORS.success,
+    backgroundColor: COLORS.successBg,
+  },
+  issueDescription: {
+    font: FONTS.body,
+    color: COLORS.text,
+    margin: "0 0 8px",
+    fontSize: "13px",
+  },
+  issueUrl: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "5px",
+    marginBottom: "8px",
+  },
+  issueUrlText: {
+    font: FONTS.mono,
+    fontSize: "11px",
+    color: COLORS.textSecondary,
+    backgroundColor: COLORS.surfaceBg,
+    padding: "2px 6px",
+    borderRadius: "3px",
+    wordBreak: "break-all",
+  },
+  fixBox: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "6px",
+    backgroundColor: COLORS.infoBg,
+    padding: "8px 10px",
+    borderRadius: "5px",
+  },
+  fixText: {
+    font: FONTS.body,
+    fontSize: "12px",
+    color: "#00357A",
+    lineHeight: "1.5",
+  },
+
+  // ── Empty states ──
+  emptyState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "48px 20px",
+    textAlign: "center",
+    backgroundColor: COLORS.surface,
+    borderBottom: `1px solid ${COLORS.border}`,
+  },
+  emptyIcon: {
+    marginBottom: "16px",
+  },
+  emptyTitle: {
+    font: FONTS.headingLg,
+    fontSize: "16px",
+    color: COLORS.text,
+    margin: "0 0 6px",
+  },
+  emptyText: {
+    font: FONTS.body,
+    color: COLORS.textSecondary,
+    margin: "0 0 16px",
+    maxWidth: "400px",
+  },
+  scanNowEmptyButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "7px",
+    backgroundColor: COLORS.brand,
+    color: "#FFFFFF",
+    border: "none",
+    borderRadius: "6px",
+    padding: "10px 20px",
+    font: FONTS.heading,
+    fontSize: "14px",
+    cursor: "pointer",
+  },
+  resetButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "6px 14px",
+    borderRadius: "6px",
+    border: `1px solid ${COLORS.border}`,
+    backgroundColor: COLORS.surface,
+    color: COLORS.textSecondary,
+    font: FONTS.bodySm,
+    fontSize: "12px",
+    cursor: "pointer",
+  },
+};
