@@ -206,7 +206,7 @@ export default function Dashboard() {
               if (!categories.has(cat)) categories.set(cat, []);
               categories.get(cat)!.push(issue);
             }
-            const categoryOrder = ["Images", "SEO", "Links", "Other"];
+            const categoryOrder = ["Images", "SEO", "Performance", "Links", "Other"];
             return categoryOrder
               .filter((c) => categories.has(c))
               .map((cat) => (
@@ -306,9 +306,9 @@ function StatCard({
 
 function IssueCard({ issue }: { issue: any }) {
   const severityColor =
-    issue.severity === "critical" ? "#ef4444" : "#f59e0b";
+    issue.severity === "critical" ? "#ef4444" : issue.severity === "info" ? "#2563eb" : "#f59e0b";
   const severityBg =
-    issue.severity === "critical" ? "#fef2f2" : "#fffbeb";
+    issue.severity === "critical" ? "#fef2f2" : issue.severity === "info" ? "#eff6ff" : "#fffbeb";
   const typeLabel = formatIssueType(issue.type);
 
   return (
@@ -387,6 +387,9 @@ function getIssueCategory(type: string): string {
   }
   if (["missing_title", "missing_meta_description"].includes(type)) {
     return "SEO";
+  }
+  if (["page_size", "page_slow", "resource_size", "resource_count", "missing_preload"].includes(type)) {
+    return "Performance";
   }
   if (["broken_link"].includes(type)) {
     return "Links";

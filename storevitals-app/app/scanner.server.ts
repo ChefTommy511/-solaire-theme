@@ -37,6 +37,9 @@ export async function runScan(scanId: number, shopDomain: string): Promise<void>
       const imageIssues = await checkPageImages(normalized, pageResult.$, baseUrl);
       allIssues.push(...imageIssues);
 
+      const performanceIssues = await checkPagePerformance(normalized, pageResult.$, baseUrl, pageResult.durationMs, pageResult.sizeBytes);
+      allIssues.push(...performanceIssues);
+
       const internalLinks = extractInternalLinks(baseUrl, pageResult.$);
       for (const link of internalLinks) {
         const norm = normalizeUrl(link);
@@ -82,9 +85,10 @@ function normalizeUrl(url: string): string {
   }
 }
 
-async function fetchAndParse(url: string): Promise<{ $: cheerio.CheerioAPI } | null> {
+async function fetchAndParse(url: string): Promise<{ $: cheerio.CheerioAPI; durationMs: number; sizeBytes: number } | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const startedAt = Date.now();
   try {
     const res = await fetch(url, {
       signal: controller.signal,
@@ -96,7 +100,12 @@ async function fetchAndParse(url: string): Promise<{ $: cheerio.CheerioAPI } | n
     });
     if (!res.ok || !res.headers.get("content-type")?.includes("text/html")) return null;
     const html = await res.text();
-    return { $: cheerio.load(html) };
+    const headerLength = Number(res.headers.get("content-length"));
+    return {
+      $: cheerio.load(html),
+      durationMs: Date.now() - startedAt,
+      sizeBytes: Number.isFinite(headerLength) && headerLength > 0 ? headerLength : Buffer.byteLength(html),
+    };
   } catch {
     return null;
   } finally {
@@ -167,6 +176,96 @@ function extractAltSuggestion(src: string): string {
     const filename = src.split("/").pop()?.split("?")[0] || "";
     return filename.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ") || "product image";
   } catch { return "product image"; }
+}
+
+async function checkPagePerformance(
+  pageUrl: string,
+  $: cheerio.CheerioAPI,
+  baseUrl: string,
+  durationMs: number,
+  sizeBytes: number,
+): Promise<InsertIssue[]> {
+  const issues: InsertIssue[] = [];
+  const baseOrigin = new URL(baseUrl).origin;
+  const mb = (sizeBytes / (1024 * 1024)).toFixed(2);
+
+  if (sizeBytes > 1024 * 1024) {
+    issues.push({ scan_id: 0, severity: "warning", type: "page_size", page_url: pageUrl,
+      description: `Page HTML is ${mb}MB (over 1MB)`,
+      fix_recommendation: "This page is over 1MB — consider reducing image sizes or removing unused scripts" });
+  }
+  if (durationMs > 3000) {
+    issues.push({ scan_id: 0, severity: "warning", type: "page_slow", page_url: pageUrl,
+      description: `Page took ${(durationMs / 1000).toFixed(1)} seconds to load`,
+      fix_recommendation: "This page takes over 3 seconds to load — optimize images, scripts, and server response time" });
+  }
+
+  const resources = new Set<string>();
+  $("script[src], link[href], img[src]").each((_, el) => {
+    const value = $(el).attr("src") || $(el).attr("href");
+    if (!value) return;
+    try {
+      const resolved = new URL(value, pageUrl);
+      if (resolved.protocol === "http:" || resolved.protocol === "https:") resources.add(resolved.href);
+    } catch { /* invalid resource URL */ }
+  });
+
+  const externalScriptStyles = new Set<string>();
+  let externalScriptStyleCount = 0;
+  $("script[src], link[rel~='stylesheet'][href]").each((_, el) => {
+    const value = $(el).attr("src") || $(el).attr("href");
+    if (!value) return;
+    try {
+      const resolved = new URL(value, pageUrl);
+      if (resolved.origin !== baseOrigin) {
+        externalScriptStyleCount++;
+        externalScriptStyles.add(resolved.origin);
+      }
+    } catch { /* invalid URL */ }
+  });
+  if (externalScriptStyleCount > 50) {
+    issues.push({ scan_id: 0, severity: "warning", type: "resource_count", page_url: pageUrl,
+      description: `Page references ${externalScriptStyleCount} external scripts or stylesheets`,
+      fix_recommendation: "Remove unused scripts and stylesheets and combine assets where practical to reduce network requests" });
+  }
+
+  const hints = new Set<string>();
+  $("link[rel='preload'], link[rel='preconnect']").each((_, el) => {
+    const value = $(el).attr("href") || $(el).attr("data-href");
+    if (!value) return;
+    try { hints.add(new URL(value, pageUrl).origin); } catch { /* invalid hint */ }
+  });
+  for (const origin of externalScriptStyles) {
+    if (!hints.has(origin)) {
+      issues.push({ scan_id: 0, severity: "info", type: "missing_preload", page_url: pageUrl,
+        description: `No preload or preconnect hint for external domain ${origin}`,
+        fix_recommendation: `Add a <link rel="preconnect" href="${origin}"> or preload critical resources from this domain` });
+    }
+  }
+
+  for (const resource of resources) {
+    try {
+      if (new URL(resource).origin !== baseOrigin) continue;
+      const res = await headResource(resource);
+      const length = Number(res.headers.get("content-length"));
+      if (Number.isFinite(length) && length > 500 * 1024) {
+        issues.push({ scan_id: 0, severity: "warning", type: "resource_size", page_url: pageUrl,
+          description: `Large resource (${Math.round(length / 1024)}KB): ${resource}`,
+          fix_recommendation: "This resource is over 500KB — compress it, serve a modern format, or remove it if unused",
+          element_detail: resource });
+      }
+    } catch { /* resource unavailable, skip */ }
+  }
+  return issues;
+}
+
+async function headResource(url: string): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    return await fetch(url, { method: "HEAD", signal: controller.signal,
+      headers: { "User-Agent": "StoreVitals-Scanner/1.0" }, redirect: "follow" });
+  } finally { clearTimeout(timer); }
 }
 
 async function checkBrokenLinks(
