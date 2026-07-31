@@ -61,13 +61,13 @@ export async function runScan(scanId: number, shopDomain: string): Promise<void>
 
     if (allIssues.length > 0) {
       const scanIssues = allIssues.map((i) => ({ ...i, scan_id: scanId }));
-      insertIssues(scanIssues);
+      await insertIssues(scanIssues);
     }
 
-    completeScan(scanId, pagesScanned);
+    await completeScan(scanId, pagesScanned);
   } catch (err) {
     console.error(`Scan ${scanId} failed:`, err);
-    try { failScan(scanId, pagesScanned); } catch { /* best effort */ }
+    try { await failScan(scanId, pagesScanned); } catch { /* best effort */ }
   }
 }
 
