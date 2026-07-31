@@ -16,4 +16,7 @@ export default defineConfig({
   ssr: {
     noExternal: ["@shopify/app-bridge-react", "@shopify/polaris"],
   },
+  optimizeDeps: {
+    exclude: ["sql.js"],
+  },
 });

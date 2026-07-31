@@ -1,17 +1,14 @@
 import { shopifyApp } from "@shopify/shopify-app-remix/server";
-import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
+import { SqlJsSessionStorage } from "./session-storage.server";
 
-const sessionStorage = new SQLiteSessionStorage(
-  // SQLite database file path (relative to project root)
-  "./prisma/dev.db"
-);
+const storage = new SqlJsSessionStorage();
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY!,
   apiSecretKey: process.env.SHOPIFY_API_SECRET!,
   appUrl: process.env.SHOPIFY_APP_URL!,
   scopes: ["read_products", "read_themes", "read_content"],
-  sessionStorage,
+  sessionStorage: storage,
   future: {
     v3_authenticatePublic: true,
     v3_lineItemBilling: true,

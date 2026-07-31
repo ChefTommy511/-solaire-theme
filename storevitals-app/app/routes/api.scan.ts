@@ -12,7 +12,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   // Check if a scan is already running
-  const latest = getLatestScan(session.shop);
+  const latest = await getLatestScan(session.shop);
   if (latest && latest.status === "running") {
     return json({
       scan: {
@@ -26,7 +26,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   // Create a new scan record
-  const scan = createScan(session.shop);
+  const scan = await createScan(session.shop);
 
   // Fire-and-forget the scanner (don't await — it runs in background)
   runScan(scan.id, session.shop).catch((err) => {

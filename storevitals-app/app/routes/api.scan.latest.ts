@@ -6,13 +6,13 @@ import { getLatestScan, getIssuesForScan } from "../db.server";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await shopify.authenticate.admin(request);
 
-  const scan = getLatestScan(session.shop);
+  const scan = await getLatestScan(session.shop);
 
   if (!scan) {
     return json({ scan: null, issues: [], issueCount: 0 });
   }
 
-  const issues = getIssuesForScan(scan.id);
+  const issues = await getIssuesForScan(scan.id);
 
   return json({
     scan: {

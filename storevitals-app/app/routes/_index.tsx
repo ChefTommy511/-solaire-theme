@@ -82,8 +82,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
   const shopData = shopResponse.data[0];
 
-  const scan = getLatestScan(session.shop) as ScanData | null;
-  const issues: Issue[] = scan ? getIssuesForScan(scan.id) : [];
+  const scan = await getLatestScan(session.shop) as ScanData | null;
+  const issues: Issue[] = scan ? await getIssuesForScan(scan.id) : [];
 
   return json({
     shop: {
