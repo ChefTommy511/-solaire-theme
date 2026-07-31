@@ -56,6 +56,9 @@ export async function runScan(scanId: number, shopDomain: string): Promise<void>
       }
     }
 
+    // Check store-level SEO infrastructure only after the page crawl is complete.
+    allIssues.push(...await checkStoreInfrastructure(baseUrl));
+
     if (allIssues.length > 0) {
       const scanIssues = allIssues.map((i) => ({ ...i, scan_id: scanId }));
       insertIssues(scanIssues);
@@ -65,6 +68,87 @@ export async function runScan(scanId: number, shopDomain: string): Promise<void>
   } catch (err) {
     console.error(`Scan ${scanId} failed:`, err);
     try { failScan(scanId, pagesScanned); } catch { /* best effort */ }
+  }
+}
+
+async function checkStoreInfrastructure(baseUrl: string): Promise<InsertIssue[]> {
+  const issues: InsertIssue[] = [];
+  const sitemapUrl = new URL("/sitemap.xml", baseUrl).href;
+  const robotsUrl = new URL("/robots.txt", baseUrl).href;
+
+  const [sitemap, robots] = await Promise.all([
+    fetchTextResource(sitemapUrl),
+    fetchTextResource(robotsUrl),
+  ]);
+
+  if (!sitemap || sitemap.status !== 200) {
+    issues.push({
+      scan_id: 0, severity: "critical", type: "missing_sitemap", page_url: sitemapUrl,
+      description: "Store is missing sitemap.xml",
+      fix_recommendation: "Make sure your store publishes a valid sitemap.xml at the site root so search engines can discover your pages.",
+    });
+  } else {
+    const sitemapBody = sitemap.body.trim();
+    let validXml = false;
+    try {
+      const parsed = cheerio.load(sitemapBody, { xmlMode: true });
+      validXml = parsed.root().children().length > 0 && parsed("url").length > 0;
+    } catch { /* invalid XML */ }
+    if (!validXml) {
+      issues.push({
+        scan_id: 0, severity: "warning", type: "sitemap_empty", page_url: sitemapUrl,
+        description: "Sitemap is empty or contains invalid XML",
+        fix_recommendation: "Ensure sitemap.xml is valid XML and includes at least one <url> entry for a published page.",
+      });
+    }
+  }
+
+  if (!robots || robots.status !== 200) {
+    issues.push({
+      scan_id: 0, severity: "warning", type: "missing_robots", page_url: robotsUrl,
+      description: "Store is missing robots.txt",
+      fix_recommendation: "Publish a robots.txt file at the site root to guide search engine crawlers.",
+    });
+    return issues;
+  }
+
+  const disallowAll = /(^|\n)\s*Disallow\s*:\s*\/\s*(?:#.*)?$/im.test(robots.body);
+  if (disallowAll) {
+    issues.push({
+      scan_id: 0, severity: "critical", type: "robots_blocked", page_url: robotsUrl,
+      description: "robots.txt blocks all search engine crawling",
+      fix_recommendation: "Remove the `Disallow: /` directive unless you intentionally want to hide the entire store from search engines.",
+    });
+  }
+
+  const referencedSitemap = robots.body.split(/\r?\n/).some((line) => {
+    const match = line.match(/^\s*Sitemap\s*:\s*(\S+)/i);
+    return match?.[1] === sitemapUrl || match?.[1]?.replace(/\/$/, "") === sitemapUrl.replace(/\/$/, "");
+  });
+  if (!referencedSitemap) {
+    issues.push({
+      scan_id: 0, severity: "warning", type: "sitemap_not_linked", page_url: robotsUrl,
+      description: "robots.txt does not reference the store sitemap",
+      fix_recommendation: `Add \`Sitemap: ${sitemapUrl}\` to robots.txt so crawlers can find your sitemap.`,
+    });
+  }
+  return issues;
+}
+
+async function fetchTextResource(url: string): Promise<{ status: number; body: string } | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "StoreVitals-Scanner/1.0 (+https://storevitals.com/bot)" },
+      redirect: "follow",
+    });
+    return { status: res.status, body: await res.text() };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

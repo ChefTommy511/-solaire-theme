@@ -377,6 +377,11 @@ function formatIssueType(type: string): string {
     image_size: "Oversized / Unoptimized Image",
     image_dimensions: "Missing Image Dimensions",
     image_format: "Wrong Image Format",
+    missing_sitemap: "Missing Sitemap",
+    missing_robots: "Missing Robots.txt",
+    robots_blocked: "Robots.txt Blocks Crawling",
+    sitemap_not_linked: "Sitemap Not Linked",
+    sitemap_empty: "Empty or Invalid Sitemap",
   };
   return labels[type] || type.replace(/_/g, " ");
 }
@@ -387,6 +392,9 @@ function getIssueCategory(type: string): string {
   }
   if (["missing_title", "missing_meta_description"].includes(type)) {
     return "SEO";
+  }
+  if (["missing_sitemap", "missing_robots", "robots_blocked", "sitemap_not_linked", "sitemap_empty"].includes(type)) {
+    return "SEO Infrastructure";
   }
   if (["page_size", "page_slow", "resource_size", "resource_count", "missing_preload"].includes(type)) {
     return "Performance";
