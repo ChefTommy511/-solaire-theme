@@ -30,7 +30,7 @@ function initSchema() {
     CREATE TABLE IF NOT EXISTS issues (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       scan_id INTEGER NOT NULL,
-      severity TEXT NOT NULL CHECK(severity IN ('critical', 'warning')),
+      severity TEXT NOT NULL CHECK(severity IN ('critical', 'warning', 'info')),
       type TEXT NOT NULL,
       page_url TEXT NOT NULL,
       source_url TEXT,
@@ -93,7 +93,7 @@ export function getLatestScan(
 
 export interface InsertIssue {
   scan_id: number;
-  severity: "critical" | "warning";
+  severity: "critical" | "warning" | "info";
   type: string;
   page_url: string;
   source_url?: string;
@@ -127,7 +127,7 @@ export function insertIssues(issues: InsertIssue[]) {
 export interface IssueRow {
   id: number;
   scan_id: number;
-  severity: "critical" | "warning";
+  severity: "critical" | "warning" | "info";
   type: string;
   page_url: string;
   source_url: string | null;
