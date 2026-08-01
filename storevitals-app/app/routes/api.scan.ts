@@ -29,7 +29,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const scan = await createScan(session.shop);
 
   // Fire-and-forget the scanner (don't await — it runs in background)
-  runScan(scan.id, session.shop).catch((err) => {
+  // This custom app is currently dedicated to the owner's public store.
+  runScan(scan.id, "https://www.squintproof.com").catch((err) => {
     console.error(`Background scan ${scan.id} failed:`, err);
   });
 

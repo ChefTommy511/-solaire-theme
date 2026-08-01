@@ -12,6 +12,7 @@ const shopify = shopifyApp({
   future: {
     v3_authenticatePublic: true,
     v3_lineItemBilling: true,
+    unstable_newEmbeddedAuthStrategy: true,
   },
 });
 
