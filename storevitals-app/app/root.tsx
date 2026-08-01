@@ -1,4 +1,8 @@
-import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
+import type {
+  HeadersFunction,
+  LinksFunction,
+  LoaderFunctionArgs,
+} from "@remix-run/node";
 import {
   Links,
   Meta,
@@ -13,6 +17,11 @@ import shopify, { authenticate } from "./shopify.server";
 export const links: LinksFunction = () => {
   return [];
 };
+
+export const headers: HeadersFunction = () => ({
+  "Content-Security-Policy":
+    "frame-ancestors https://admin.shopify.com https://*.myshopify.com;",
+});
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
