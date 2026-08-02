@@ -9,8 +9,6 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
-import { AppProvider } from "@shopify/shopify-app-remix/react";
-
 export const links: LinksFunction = () => {
   return [];
 };
@@ -21,8 +19,6 @@ export const headers: HeadersFunction = () => ({
 });
 
 export default function App() {
-  const apiKey = process.env.SHOPIFY_API_KEY || "";
-
   return (
     <html>
       <head>
@@ -32,9 +28,7 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <AppProvider isEmbeddedApp apiKey={apiKey}>
-          <Outlet />
-        </AppProvider>
+        <Outlet />
         <ScrollRestoration />
         <Scripts />
       </body>
