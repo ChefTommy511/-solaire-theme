@@ -1,12 +1,9 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import shopify from "../shopify.server";
 import { getLatestScan, getIssuesForScan } from "../db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await shopify.authenticate.admin(request);
-
-  const scan = await getLatestScan(session.shop);
+  const scan = await getLatestScan("squintproof.com");
 
   if (!scan) {
     return json({ scan: null, issues: [], issueCount: 0 });

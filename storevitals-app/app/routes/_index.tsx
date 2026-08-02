@@ -2,7 +2,6 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useCallback, useEffect, useState } from "react";
-import shopify from "../shopify.server";
 
 type Issue = {
   id: number;
@@ -14,13 +13,10 @@ type Issue = {
 };
 type ScanData = { scan: { status: string; pages_scanned: number; completed_at?: string | null } | null; issues: Issue[]; issueCount: number };
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  try {
-    const { session } = await shopify.authenticate.admin(request);
-    return json({ shop: session.shop });
-  } catch {
-    return json({ shop: process.env.SHOPIFY_CUSTOM_DOMAIN || "p1r2u2-id.myshopify.com" });
-  }
+export const loader = async (_args: LoaderFunctionArgs) => {
+  // This custom app is dedicated to the owner's public store and intentionally
+  // does not require a Shopify OAuth session to render the dashboard.
+  return json({ shop: "squintproof.com" });
 };
 
 const initial: ScanData = { scan: null, issues: [], issueCount: 0 };
