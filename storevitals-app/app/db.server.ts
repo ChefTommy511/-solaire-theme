@@ -140,7 +140,7 @@ export async function createScan(shopDomain: string): Promise<{ id: number }> {
   const db = await getDb();
   const result = runMutate(
     db,
-    "INSERT INTO scans (shop_domain, status, started_at) VALUES (?, 'running', datetime('now'))",
+    "INSERT INTO scans (shop_domain, status, started_at) VALUES (@shop_domain, 'running', datetime('now'))",
     { shop_domain: shopDomain }
   );
   return { id: result.lastInsertRowid };
@@ -150,7 +150,7 @@ export async function completeScan(scanId: number, pagesScanned: number) {
   const db = await getDb();
   runMutate(
     db,
-    "UPDATE scans SET status = 'complete', pages_scanned = ?, completed_at = datetime('now') WHERE id = ?",
+    "UPDATE scans SET status = 'complete', pages_scanned = @pages_scanned, completed_at = datetime('now') WHERE id = @id",
     { pages_scanned: pagesScanned, id: scanId }
   );
 }
@@ -159,7 +159,7 @@ export async function failScan(scanId: number, pagesScanned: number) {
   const db = await getDb();
   runMutate(
     db,
-    "UPDATE scans SET status = 'failed', pages_scanned = ?, completed_at = datetime('now') WHERE id = ?",
+    "UPDATE scans SET status = 'failed', pages_scanned = @pages_scanned, completed_at = datetime('now') WHERE id = @id",
     { pages_scanned: pagesScanned, id: scanId }
   );
 }
@@ -168,7 +168,7 @@ export async function getLatestScan(
   shopDomain: string
 ): Promise<{ id: number; status: string; pages_scanned: number; started_at: string; completed_at: string | null } | null> {
   const db = await getDb();
-  const rows = queryAll(db, "SELECT * FROM scans WHERE shop_domain = ? ORDER BY id DESC LIMIT 1", {
+  const rows = queryAll(db, "SELECT * FROM scans WHERE shop_domain = @shop_domain ORDER BY id DESC LIMIT 1", {
     shop_domain: shopDomain,
   });
   if (rows.length === 0) return null;
@@ -200,7 +200,7 @@ export async function insertIssue(issue: InsertIssue) {
   runMutate(
     db,
     `INSERT INTO issues (scan_id, severity, type, page_url, source_url, description, fix_recommendation, element_detail)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (@scan_id, @severity, @type, @page_url, @source_url, @description, @fix_recommendation, @element_detail)`,
     {
       scan_id: issue.scan_id,
       severity: issue.severity,
@@ -279,7 +279,7 @@ export async function getIssuesForScan(scanId: number): Promise<IssueRow[]> {
 
 export async function deleteIssuesForScan(scanId: number) {
   const db = await getDb();
-  runMutate(db, "DELETE FROM issues WHERE scan_id = ?", { scan_id: scanId });
+  runMutate(db, "DELETE FROM issues WHERE scan_id = @scan_id", { scan_id: scanId });
 }
 
 // ── Re-export getDb for session storage ──
